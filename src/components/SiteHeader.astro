@@ -16,7 +16,7 @@ const { currentView } = Astro.props;
       <nav aria-label="Work index">
         <ul class="site-nav-main">
           <li>
-            <a href={currentView === 'all' ? '/' : '/all/#work'} class:list={{ 'is-active': currentView !== 'all' }}>
+            <a href={currentView === 'all' ? '/' : '/all/'} class:list={{ 'is-active': currentView !== 'all' }}>
               {currentView === 'all' ? 'Home' : 'All projects'}
             </a>
           </li>

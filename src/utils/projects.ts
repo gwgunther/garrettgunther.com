@@ -18,6 +18,7 @@ export type Project = {
 /** Public URL path after sync-media — disables Vimeo for that slug */
 const LOCAL_VIDEO_BY_SLUG: Record<string, string> = {
   'winter-sticks': '/video/WinterSticks_30s.mp4',
+  'chubbies-x-kingsford': '/video/chubbies-shorts-tailgate.mp4',
 };
 
 export function loadProjects(): Project[] {

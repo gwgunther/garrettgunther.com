@@ -62,6 +62,16 @@
     "GWGU0264-p-2000.jpg",
     "GWGU0258-p-2000.jpg"
   ],
+  "kickstart-joy": [
+    "DJI_0017.jpg",
+    "DSC03425.jpg",
+    "DSC03435.jpg",
+    "DSC03457.jpg",
+    "DSC03476.jpg",
+    "DSC03492.jpg",
+    "DSC03496.jpg",
+    "DSC03518.jpg"
+  ],
   "lashaun-engagement": [
     "GWGU1411-p-1600x1067.jpeg",
     "GWGU2155-p-1600x1067.jpeg",
@@ -174,5 +184,12 @@
     "GWGU0187.jpg",
     "GWGU0139.jpg",
     "GWGU0305.jpg"
+  ],
+  "winter-sticks": [
+    "000003050007_single.gif",
+    "000003050009_single.gif",
+    "000003050017.jpg_single.gif",
+    "000003050019.jpg_single.gif",
+    "000003050027_single.gif"
   ]
 }

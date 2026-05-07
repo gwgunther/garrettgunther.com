@@ -129,7 +129,7 @@ const pageDesc =
                   )
                 }
                 {hasVideo ? (
-                  <a href={workHref} class="project-card__thumb project-card__thumb-link project-card__thumb--embed">
+                  <div class="project-card__thumb project-card__thumb-link project-card__thumb--embed">
                     {
                       localVideo ? (
                         <video
@@ -164,7 +164,7 @@ const pageDesc =
                         </span>
                       )
                     }
-                  </a>
+                  </div>
                 ) : hero ? (
                   <a href={workHref} class="project-card__thumb project-card__thumb-link">
                     <img

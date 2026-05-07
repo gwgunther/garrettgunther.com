@@ -22,6 +22,7 @@
   --space-xl: 4.5rem;
   --max-w: 918px;
   --header-height: 3.25rem;
+  --grid-gap: var(--space-md);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -263,7 +264,11 @@ a:hover {
 }
 
 .intro-columns + .featured-label {
-  margin-top: calc(var(--space-xl) + var(--space-md));
+  margin-top: calc(var(--space-xl) + var(--space-lg));
+}
+
+.intro--home .featured-label {
+  margin-bottom: var(--space-sm);
 }
 
 
@@ -284,7 +289,7 @@ a:hover {
   max-width: 38rem;
   font-size: var(--type-body-size);
   letter-spacing: var(--type-body-tracking);
-  line-height: 1.15;
+  line-height: 1.45;
   color: #000;
 }
 
@@ -309,20 +314,13 @@ a:hover {
 .intro-column {
   margin: 0;
   padding: 0;
-  list-style: none;
+  display: flex;
+  flex-direction: column;
   text-align: left;
 }
 
-.intro-column li {
-  margin: 0;
-  font-size: var(--type-body-size);
-  letter-spacing: var(--type-body-tracking);
-  line-height: 1;
-  color: var(--text-muted);
-}
-
-.intro-column li + li {
-  margin-top: 0;
+.intro-column > .intro-line__link + .intro-line__link {
+  margin-top: 0.05rem;
 }
 
 .intro-column--social {
@@ -367,7 +365,7 @@ a:hover {
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.17em;
-  line-height: 1;
+  line-height: 1.12;
 }
 
 .intro-line__link:hover {
@@ -572,9 +570,11 @@ a:hover {
 }
 
 .all-page-title {
-  margin: 0 0 var(--space-sm);
+  margin: 0 0 var(--space-md);
   font-family: var(--font-ui);
-  color: var(--accent);
+  color: #000;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: var(--space-sm);
 }
 
 .all-page-title--timeline {
@@ -587,7 +587,6 @@ a:hover {
   z-index: 45;
   margin-bottom: var(--space-sm);
   padding-block: var(--space-lg) var(--space-lg);
-  border-bottom: 1px solid var(--border);
   background: var(--bg);
 }
 
@@ -740,10 +739,10 @@ a:hover {
   content: "";
   position: absolute;
   left: 50%;
-  bottom: 0;
+  bottom: -1px;
   width: 0;
-  height: 100%;
-  border-left: 1px solid #aaa7a0;
+  height: calc(100% + 1px);
+  border-left: 1px solid rgba(0, 0, 0, 0.08);
   transform: translateX(-50%);
   background: transparent;
 }
@@ -756,7 +755,7 @@ a:hover {
 
 .all-years__post-marker:hover::before,
 .all-years__post-marker.is-active::before {
-  border-left-color: #aaa7a0;
+  border-left-color: rgba(0, 0, 0, 0.08);
 }
 
 .all-years__post-marker.is-selected::before {
@@ -974,14 +973,14 @@ a:hover {
 
 /* --- All projects grid --- */
 .all-work-grid {
-  padding-top: var(--space-md);
-  padding-bottom: var(--space-xl);
+  padding-block: var(--space-md);
 }
 
 .project-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
-  gap: var(--space-md);
+  column-gap: var(--grid-gap);
+  row-gap: var(--grid-gap);
 }
 
 .project-year-marker {
@@ -1004,6 +1003,25 @@ a:hover {
   letter-spacing: var(--type-label-tracking);
   line-height: 1;
   text-transform: uppercase;
+}
+
+@media (max-width: 560px) {
+  .project-card--year-start {
+    margin-top: 1.75rem;
+  }
+
+  .project-year-marker {
+    top: -1.4rem;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    text-align: center;
+  }
+
+  .project-year-marker span {
+    writing-mode: horizontal-tb;
+    transform: none;
+  }
 }
 
 .project-card--grid[id] {
@@ -1344,7 +1362,7 @@ a:hover {
 
 .gallery {
   column-count: 1;
-  column-gap: var(--space-sm);
+  column-gap: var(--grid-gap);
   margin-top: var(--space-lg);
 }
 
@@ -1356,7 +1374,7 @@ a:hover {
 
 .gallery figure {
   margin: 0;
-  margin-bottom: var(--space-sm);
+  margin-bottom: var(--grid-gap);
   display: inline-block;
   width: 100%;
   position: relative;

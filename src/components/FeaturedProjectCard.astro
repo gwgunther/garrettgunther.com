@@ -23,8 +23,7 @@ const isEmbed = hasVideo;
   class="project-card project-card--grid project-card--home"
   style={{ animationDelay: `${Math.min(animationIndex, 8) * 0.04}s` }}
 >
-  <a
-    href={`/work/${p.slug}/`}
+  <div
     class:list={[
       'project-card__thumb project-card__thumb-link',
       { 'project-card__thumb--embed': isEmbed },
@@ -67,7 +66,7 @@ const isEmbed = hasVideo;
         </span>
       )
     }
-  </a>
+  </div>
   <a href={`/work/${p.slug}/`} class="project-card__grid-link">
     <div class="project-card__grid-copy">
       <div class="project-card__grid-title-row">

@@ -179,6 +179,17 @@
     "youtube": []
   },
   {
+    "slug": "okay-so-picture-this",
+    "title": "OKAY SO PICTURE THIS...",
+    "dateLabel": "Nov 3, 2016",
+    "location": "San Francisco, California",
+    "sortDate": "2016-11-03T07:00:00.000Z",
+    "vimeo": [],
+    "youtube": [
+      "7HRhepGFtcE"
+    ]
+  },
+  {
     "slug": "athletics-canada-i-dont-do-easy",
     "title": "Athletics Canada",
     "dateLabel": "August 1, 2016",
@@ -336,9 +347,9 @@
   {
     "slug": "onewheel-kickstarter",
     "title": "Onewheel Kickstarter",
-    "dateLabel": "January 20, 2014",
-    "location": "Mountain View",
-    "sortDate": "2014-01-20T08:00:00.000Z",
+    "dateLabel": "Jan 15, 2014",
+    "location": "Palo Alto, California",
+    "sortDate": "2014-01-15T08:00:00.000Z",
     "vimeo": [
       "84263524"
     ],

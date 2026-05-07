@@ -1348,36 +1348,45 @@ a:hover {
 }
 
 .gallery {
-  display: grid;
-  gap: var(--space-sm);
+  column-count: 1;
+  column-gap: var(--space-sm);
   margin-top: var(--space-lg);
 }
 
 @media (min-width: 640px) {
   .gallery {
-    grid-template-columns: repeat(2, 1fr);
+    column-count: 2;
   }
 }
 
 .gallery figure {
   margin: 0;
+  margin-bottom: var(--space-sm);
+  display: inline-block;
+  width: 100%;
   position: relative;
   overflow: hidden;
-  border: 1px solid var(--border);
-  background: var(--bg-elevated);
+  border: 0;
+  background: transparent;
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  page-break-inside: avoid;
 }
 
 .gallery img {
   width: 100%;
+  height: auto;
   display: block;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .gallery-open {
   border: 0;
   padding: 0;
   margin: 0;
+  display: block;
   width: 100%;
+  line-height: 0;
   background: transparent;
   cursor: zoom-in;
 }

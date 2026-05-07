@@ -53,14 +53,13 @@ export function projectYears(projects: Project[]): number[] {
 /** Curated homepage selection (order preserved). Revise anytime. */
 export const FEATURED_SLUGS: string[] = [
   'winter-sticks',
-  'qargha-refugee-camp',
-  'venture-boldly',
-  'nishika-2k19',
-  'cote-dazur',
   'kickstart-joy',
-  'chez-dede-the-roman-journey',
-  'wadi-rum',
-  'kabul',
+  'athletics-canada-i-dont-do-easy',
+  'july-on-a-boat',
+  'phildev-a-farmers-son',
+  'stanford-alumni-association-welcome-to-the-family',
+  'leaveyourlegacy',
+  'field-maintenance',
 ];
 
 export function featuredProjects(all: Project[]): Project[] {

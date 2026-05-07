@@ -40,7 +40,10 @@ const timelineYears = Array.from(
   (_, i) => oldestYear + i
 ).map((year) => ({
   year,
-  position: clampPosition(timelinePosition(`${year}-01-01`)),
+  position:
+    newestYear === oldestYear
+      ? 0
+      : clampPosition(((year - oldestYear) / (newestYear - oldestYear)) * 100),
 }));
 
 const pageDesc =
@@ -55,7 +58,6 @@ const pageDesc =
   <SiteHeader currentView="all" />
   <main id="main">
     <nav class="all-years wrap" aria-label="Project timeline">
-      <h1 class="all-page-title all-page-title--timeline">All projects</h1>
       <div class="all-years__rail">
         <div class="all-years__line" aria-hidden="true"></div>
         <div
@@ -96,6 +98,7 @@ const pageDesc =
     </nav>
 
     <div id="work" class="wrap all-work-grid">
+      <h1 class="all-page-title">All projects</h1>
       <div class="project-grid">
         {
           gridItems.map(({ p, year, anchorId, isFirstOfYear, cardId }, i) => {
@@ -237,9 +240,10 @@ const pageDesc =
     if (typeof window !== 'undefined') {
       const header = document.querySelector('.site-header');
       const headerHeight = header ? header.getBoundingClientRect().height : 0;
+      const timeline = document.querySelector('.all-years');
       const rail = document.querySelector('.all-years__rail');
       const cursor = document.querySelector('.all-years__cursor');
-      const topOffset = headerHeight + 12;
+      const topOffset = headerHeight + (timeline ? timeline.getBoundingClientRect().height : 0) + 12;
       let isDraggingTimeline = false;
       let pendingDragPercent = null;
       let dragFrame = 0;

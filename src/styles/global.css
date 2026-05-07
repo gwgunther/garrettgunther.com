@@ -263,7 +263,7 @@ a:hover {
 }
 
 .intro-columns + .featured-label {
-  margin-top: var(--space-md);
+  margin-top: calc(var(--space-xl) + var(--space-md));
 }
 
 
@@ -284,7 +284,7 @@ a:hover {
   max-width: 38rem;
   font-size: var(--type-body-size);
   letter-spacing: var(--type-body-tracking);
-  line-height: 1.65;
+  line-height: 1.15;
   color: #000;
 }
 
@@ -582,8 +582,9 @@ a:hover {
 }
 
 .all-years {
-  position: relative;
-  z-index: 1;
+  position: sticky;
+  top: calc(var(--space-md) + var(--header-height));
+  z-index: 45;
   margin-bottom: var(--space-sm);
   padding-block: var(--space-lg) var(--space-lg);
   border-bottom: 1px solid var(--border);

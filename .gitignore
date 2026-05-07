@@ -1,6 +1,8 @@
-# Copied from ../Original on build (npm run sync-media / prebuild / predev)
+# Generated from media-source/ by scripts/sync-media.mjs
 public/media/
 public/video/
+public/icons/
+public/favicon.png
 
 # build output
 dist/

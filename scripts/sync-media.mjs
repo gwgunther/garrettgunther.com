@@ -1,174 +1,129 @@
 /**
- * Copies images referenced in Original/HTML/projects/*.html from Original/HTML/images/
- * (Webflow export) into public/media/{slug}/ and writes media-manifest.json.
+ * Astro-native media sync.
  *
- * Rules:
- * - Only each <img>’s primary `src` is used (not every srcset URL), so galleries stay one file per frame.
- * - Syncs when the HTML has a real gallery (`project-page-image`), or when it’s photo-only
- *   (`image-main` and no Vimeo/YouTube embed).
- * - Skips video-only pieces so they never get stray stills.
+ * Copies curated media from `media-source/` to `public/` using `src/data/media-manifest.json`.
+ * This keeps runtime assets deterministic for GitHub + Cloudflare Pages builds and avoids
+ * direct dependency on legacy Webflow HTML exports.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.join(__dirname, '../..');
-const PROJECTS_HTML = path.join(ROOT, 'Original/HTML/projects');
-const WEBFLOW_IMAGES = path.join(ROOT, 'Original/HTML/images');
-const PHOTOS_ROOT = path.join(ROOT, 'Original/Images/Photos');
-const PUBLIC = path.join(__dirname, '../public');
-const PUBLIC_MEDIA = path.join(PUBLIC, 'media');
-const MANIFEST = path.join(__dirname, '../src/data/media-manifest.json');
+const ROOT = path.resolve(__dirname, '..');
+const MEDIA_SOURCE_ROOT = path.join(ROOT, 'media-source');
+const MEDIA_SOURCE_IMAGES = path.join(MEDIA_SOURCE_ROOT, 'media');
+const MEDIA_SOURCE_VIDEO = path.join(MEDIA_SOURCE_ROOT, 'video');
+const MEDIA_SOURCE_ICONS = path.join(MEDIA_SOURCE_ROOT, 'icons');
+const MEDIA_SOURCE_FAVICON = path.join(MEDIA_SOURCE_ROOT, 'favicon.png');
 
-const IMG_EXT = /\.(jpe?g|png|webp|gif)$/i;
+const PUBLIC_ROOT = path.join(ROOT, 'public');
+const PUBLIC_MEDIA = path.join(PUBLIC_ROOT, 'media');
+const PUBLIC_VIDEO = path.join(PUBLIC_ROOT, 'video');
+const PUBLIC_ICONS = path.join(PUBLIC_ROOT, 'icons');
+const PUBLIC_FAVICON = path.join(PUBLIC_ROOT, 'favicon.png');
+const MANIFEST_PATH = path.join(ROOT, 'src/data/media-manifest.json');
 
-const SKIP_FILES = new Set(['linkedin.png', 'instagram.png', 'menu-icon_1menu-icon.png', 'menu-icon.png']);
+const VIDEO_MAX_BYTES = 25 * 1024 * 1024;
+const VIDEO_EXTENSIONS = new Set(['.mp4', '.webm']);
 
-/** Optional per-project override: include all files from Original/Images/Photos/<folder> */
-const ALL_FROM_PHOTOS = {
-  'venture-boldly': 'Alter - Venture Boldly',
-};
-
-function shouldSyncPhotosForSlug(slug) {
-  const htmlPath = path.join(PROJECTS_HTML, `${slug}.html`);
-  if (!fs.existsSync(htmlPath)) {
-    console.warn('Missing project HTML:', htmlPath);
-    return false;
-  }
-  const html = fs.readFileSync(htmlPath, 'utf8');
-  if (html.includes('project-page-image')) return true;
-  const hasHostedVideo =
-    /player\.vimeo\.com|youtube\.com\/embed|youtube-nocookie\.com\/embed/i.test(html);
-  if (hasHostedVideo) return false;
-  return html.includes('image-main');
+function readManifest() {
+  const raw = fs.readFileSync(MANIFEST_PATH, 'utf8');
+  return JSON.parse(raw);
 }
 
-/**
- * Primary `src` on each <img> pointing at ../images/... document order, deduped.
- */
-function listImageFilesFromProjectHtml(html) {
-  const re = /<img\b[^>]*\bsrc=["']\.\.\/images\/([^"'>\s]+)["']/gi;
-  const seen = new Set();
-  const out = [];
-  let m;
-  while ((m = re.exec(html))) {
-    const name = m[1].split('?')[0];
-    if (SKIP_FILES.has(name) || !IMG_EXT.test(name)) continue;
-    if (seen.has(name)) continue;
-    seen.add(name);
-    out.push(name);
-  }
-  return out;
+function ensureDir(dirPath) {
+  fs.mkdirSync(dirPath, { recursive: true });
 }
 
-/** Self-hosted videos: copied to public/video/ — keep each file under ~25 MiB for Cloudflare Pages. */
-const VIDEO_FILES = [{ src: ['Original', 'Video', 'WinterSticks_30s.mp4'], dest: 'winter-sticks.mp4' }];
+function resetDir(dirPath) {
+  fs.rmSync(dirPath, { recursive: true, force: true });
+  fs.mkdirSync(dirPath, { recursive: true });
+}
 
-function copySelfHostedVideo() {
-  const destDir = path.join(PUBLIC, 'video');
-  fs.mkdirSync(destDir, { recursive: true });
-  for (const { src: rel, dest } of VIDEO_FILES) {
-    const abs = path.join(ROOT, ...rel);
-    if (!fs.existsSync(abs)) {
-      console.warn('Video source missing:', abs);
-      continue;
+function syncProjectMedia(manifest) {
+  resetDir(PUBLIC_MEDIA);
+  if (!fs.existsSync(MEDIA_SOURCE_IMAGES)) {
+    throw new Error(`Missing media source directory: ${MEDIA_SOURCE_IMAGES}`);
+  }
+
+  const missing = [];
+  let copiedCount = 0;
+
+  for (const [slug, files] of Object.entries(manifest)) {
+    if (!Array.isArray(files)) continue;
+    const targetDir = path.join(PUBLIC_MEDIA, slug);
+    ensureDir(targetDir);
+    for (const filename of files) {
+      const sourceFile = path.join(MEDIA_SOURCE_IMAGES, slug, filename);
+      const targetFile = path.join(targetDir, filename);
+      if (!fs.existsSync(sourceFile)) {
+        missing.push(`${slug}/${filename}`);
+        continue;
+      }
+      fs.copyFileSync(sourceFile, targetFile);
+      copiedCount += 1;
     }
-    const maxBytes = 25 * 1024 * 1024;
-    const st = fs.statSync(abs);
-    if (st.size > maxBytes) {
+  }
+
+  return { missing, copiedCount };
+}
+
+function syncDirectory(sourceDir, targetDir) {
+  if (!fs.existsSync(sourceDir)) return 0;
+  resetDir(targetDir);
+
+  const entries = fs.readdirSync(sourceDir, { withFileTypes: true });
+  let copied = 0;
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    const src = path.join(sourceDir, entry.name);
+    const dest = path.join(targetDir, entry.name);
+    fs.copyFileSync(src, dest);
+    copied += 1;
+  }
+  return copied;
+}
+
+function syncFavicon() {
+  if (!fs.existsSync(MEDIA_SOURCE_FAVICON)) return false;
+  fs.copyFileSync(MEDIA_SOURCE_FAVICON, PUBLIC_FAVICON);
+  return true;
+}
+
+function warnForLargeVideos() {
+  if (!fs.existsSync(PUBLIC_VIDEO)) return;
+  const entries = fs.readdirSync(PUBLIC_VIDEO, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    const ext = path.extname(entry.name).toLowerCase();
+    if (!VIDEO_EXTENSIONS.has(ext)) continue;
+    const filePath = path.join(PUBLIC_VIDEO, entry.name);
+    const size = fs.statSync(filePath).size;
+    if (size > VIDEO_MAX_BYTES) {
       console.warn(
-        `Video ${dest} is ${(st.size / 1024 / 1024).toFixed(1)} MiB (Pages limit ~25 MiB/file). Re-encode or host on R2.`,
+        `[warning] ${entry.name} is ${(size / 1024 / 1024).toFixed(1)} MiB. Cloudflare Pages soft limit is ~25 MiB/file.`,
       );
     }
-    fs.copyFileSync(abs, path.join(destDir, dest));
-    console.log('Synced video:', dest);
   }
-}
-
-function copyIcons() {
-  const iconsSrc = path.join(ROOT, 'Original/Images/Icons');
-  const dest = path.join(PUBLIC, 'icons');
-  fs.mkdirSync(dest, { recursive: true });
-  for (const f of ['linkedin.png', 'instagram.png']) {
-    const fp = path.join(iconsSrc, f);
-    if (fs.existsSync(fp)) fs.copyFileSync(fp, path.join(dest, f));
-  }
-  const favSrc = path.join(ROOT, 'Original/Images/fav/favicon/gg_favicon_32.png');
-  if (fs.existsSync(favSrc)) fs.copyFileSync(favSrc, path.join(PUBLIC, 'favicon.png'));
 }
 
 function main() {
-  copyIcons();
-  copySelfHostedVideo();
+  const manifest = readManifest();
+  const { missing, copiedCount } = syncProjectMedia(manifest);
+  const copiedIcons = syncDirectory(MEDIA_SOURCE_ICONS, PUBLIC_ICONS);
+  const copiedVideo = syncDirectory(MEDIA_SOURCE_VIDEO, PUBLIC_VIDEO);
+  const copiedFavicon = syncFavicon();
+  warnForLargeVideos();
 
-  if (!fs.existsSync(PROJECTS_HTML) || !fs.existsSync(WEBFLOW_IMAGES)) {
-    console.warn('Skipping Webflow media sync: source export folders are not present.');
-    return;
+  if (missing.length) {
+    const sample = missing.slice(0, 10).join(', ');
+    console.warn(`Missing manifest files in media-source (${missing.length} total). Example: ${sample}`);
   }
 
-  fs.rmSync(PUBLIC_MEDIA, { recursive: true, force: true });
-  fs.mkdirSync(PUBLIC_MEDIA, { recursive: true });
-
-  const manifest = {};
-  const skippedRule = [];
-  const missingOnDisk = [];
-
-  const projectFiles = fs.readdirSync(PROJECTS_HTML).filter((f) => f.endsWith('.html'));
-
-  for (const file of projectFiles) {
-    const slug = file.replace(/\.html$/i, '');
-    if (!shouldSyncPhotosForSlug(slug)) {
-      skippedRule.push(slug);
-      continue;
-    }
-
-    const html = fs.readFileSync(path.join(PROJECTS_HTML, file), 'utf8');
-    const overridePhotosFolder = ALL_FROM_PHOTOS[slug];
-    const overrideSourceDir = overridePhotosFolder ? path.join(PHOTOS_ROOT, overridePhotosFolder) : null;
-    if (overrideSourceDir && !fs.existsSync(overrideSourceDir)) {
-      console.warn('Override photos folder missing for', slug, 'at', overrideSourceDir);
-      continue;
-    }
-    const filenames = overridePhotosFolder
-      ? fs
-          .readdirSync(overrideSourceDir)
-          .filter((name) => IMG_EXT.test(name))
-          .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
-      : listImageFilesFromProjectHtml(html);
-    if (!filenames.length) {
-      console.warn('No <img src="../images/..."> found for', slug);
-      continue;
-    }
-
-    const destDir = path.join(PUBLIC_MEDIA, slug);
-    fs.mkdirSync(destDir, { recursive: true });
-    const copied = [];
-
-    for (const name of filenames) {
-      const srcFile = overrideSourceDir ? path.join(overrideSourceDir, name) : path.join(WEBFLOW_IMAGES, name);
-      if (!fs.existsSync(srcFile)) {
-        missingOnDisk.push({ slug, name });
-        continue;
-      }
-      fs.copyFileSync(srcFile, path.join(destDir, name));
-      copied.push(name);
-    }
-
-    if (copied.length) manifest[slug] = copied;
-  }
-
-  if (skippedRule.length) {
-    console.log('Skipped (no gallery / video-only in Webflow HTML):', skippedRule.length, 'projects');
-  }
-  if (missingOnDisk.length) {
-    const sample = missingOnDisk.slice(0, 8).map((x) => `${x.slug}: ${x.name}`);
-    console.warn('Missing under Original/HTML/images/:', missingOnDisk.length, 'files', sample.length ? `e.g. ${sample.join('; ')}` : '');
-  }
-
-  fs.mkdirSync(path.dirname(MANIFEST), { recursive: true });
-  fs.writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2), 'utf8');
-  console.log('Synced Webflow images for', Object.keys(manifest).length, 'projects');
+  console.log(
+    `Synced media assets: ${copiedCount} images, ${copiedVideo} videos, ${copiedIcons} icons${copiedFavicon ? ', favicon' : ''}.`,
+  );
 }
 
 main();

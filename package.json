@@ -9,9 +9,11 @@
     "predev": "node scripts/sync-media.mjs",
     "dev": "astro dev",
     "extract": "node scripts/migrate-from-webflow.mjs",
+    "bootstrap-media": "node scripts/bootstrap-media-source.mjs",
     "sync-media": "node scripts/sync-media.mjs",
     "prebuild": "node scripts/sync-media.mjs",
     "build": "astro build",
+    "build:cloudflare": "npm run build",
     "preview": "astro preview",
     "astro": "astro"
   },

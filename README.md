@@ -1,43 +1,45 @@
-# Astro Starter Kit: Minimal
+# Garrett Gunther — Astro Site
 
-```sh
-npm create astro@latest -- --template minimal
-```
+This repository is organized for Astro builds on GitHub and Cloudflare Pages.
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## Media Workflow (Astro-first)
 
-## 🚀 Project Structure
+The website does **not** read from legacy Webflow HTML exports at runtime.
 
-Inside of your Astro project, you'll see the following folders and files:
+- Source of truth for project media list: `src/data/media-manifest.json`
+- Raw media source folder (commit this): `media-source/`
+- Generated runtime folder (do not commit): `public/media/`, `public/video/`, `public/icons/`, `public/favicon.png`
+- Sync script: `scripts/sync-media.mjs`
+
+Required media layout:
 
 ```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
+media-source/
+├── media/
+│   └── <project-slug>/
+│       └── <files listed in src/data/media-manifest.json>
+├── video/
+│   └── *.mp4 (or *.webm)
+├── icons/
+│   └── *.png
+└── favicon.png
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+## Commands
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+- `npm install` — install dependencies
+- `npm run dev` — sync media, then run local dev server
+- `npm run bootstrap-media` — one-time copy from local `ORIGINAL/` archive into `media-source/`
+- `npm run sync-media` — validate + copy media-source assets into `public/`
+- `npm run build` — sync media, then build Astro output in `dist/`
+- `npm run build:cloudflare` — Cloudflare Pages build command
+- `npm run preview` — preview built output
 
-Any static assets, like images, can be placed in the `public/` directory.
+## Cloudflare Pages Setup
 
-## 🧞 Commands
+- Framework preset: `Astro`
+- Build command: `npm run build:cloudflare`
+- Build output directory: `dist`
+- Node version: `22.12.0` or newer
 
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+`public/_headers` and `public/_redirects` are included in builds for Cloudflare Pages behavior.

@@ -153,8 +153,8 @@ a:hover {
   list-style: none;
   margin: 0;
   padding: 0;
-  font-size: var(--type-label-size);
-  font-weight: var(--type-label-weight);
+  font-size: 0.62rem;
+  font-weight: 600;
   letter-spacing: var(--type-label-tracking);
   text-transform: uppercase;
   line-height: 1;
@@ -184,10 +184,10 @@ a:hover {
 
 
 .site-social a {
-  color: var(--text-muted);
+  color: #000;
   text-decoration: none;
-  font-size: var(--type-label-size);
-  font-weight: var(--type-label-weight);
+  font-size: 0.62rem;
+  font-weight: 600;
   letter-spacing: var(--type-label-tracking);
   text-transform: uppercase;
   line-height: 1;
@@ -367,10 +367,13 @@ a:hover {
 }
 
 .intro-line__link {
-  color: var(--accent);
+  color: #000;
   text-decoration: none;
+  font-size: 0.62rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--type-label-tracking);
+  line-height: 1;
 }
 
 .intro-line__link:hover {
@@ -942,7 +945,7 @@ a:hover {
   margin: 0;
   max-width: 36rem;
   font-size: var(--type-body-size);
-  color: var(--text-muted);
+  color: #000;
   letter-spacing: var(--type-body-tracking);
 }
 

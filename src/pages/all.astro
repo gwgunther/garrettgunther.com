@@ -125,18 +125,7 @@ const pageDesc =
                     </span>
                   )
                 }
-                {hero ? (
-                  <a href={workHref} class="project-card__thumb project-card__thumb-link">
-                    <img
-                      src={`/media/${p.slug}/${hero}`}
-                      alt=""
-                      loading={eagerMedia ? 'eager' : 'lazy'}
-                      decoding="async"
-                      width="640"
-                      height="400"
-                    />
-                  </a>
-                ) : hasVideo ? (
+                {hasVideo ? (
                   <a href={workHref} class="project-card__thumb project-card__thumb-link project-card__thumb--embed">
                     {
                       localVideo ? (
@@ -172,6 +161,17 @@ const pageDesc =
                         </span>
                       )
                     }
+                  </a>
+                ) : hero ? (
+                  <a href={workHref} class="project-card__thumb project-card__thumb-link">
+                    <img
+                      src={`/media/${p.slug}/${hero}`}
+                      alt=""
+                      loading={eagerMedia ? 'eager' : 'lazy'}
+                      decoding="async"
+                      width="640"
+                      height="400"
+                    />
                   </a>
                 ) : (
                   <a href={workHref} class="project-card__thumb project-card__thumb-link">

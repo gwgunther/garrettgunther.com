@@ -687,6 +687,23 @@ a:hover {
   .all-years__ticks .all-years__tick:nth-child(even) {
     visibility: hidden;
   }
+
+  .project-card--year-start {
+    margin-top: 1.75rem;
+  }
+
+  .project-year-marker {
+    top: -1.4rem;
+    left: 0;
+    right: 0;
+    transform: none;
+    text-align: center;
+  }
+
+  .project-year-marker span {
+    writing-mode: horizontal-tb;
+    transform: none;
+  }
 }
 
 .all-years__posts {

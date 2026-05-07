@@ -1,0 +1,192 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import SiteHeader from '../../components/SiteHeader.astro';
+import { loadProjects } from '../../utils/projects';
+
+export function getStaticPaths() {
+  return loadProjects().map((p) => ({ params: { slug: p.slug } }));
+}
+
+const { slug } = Astro.params;
+const projects = loadProjects();
+const project = projects.find((p) => p.slug === slug);
+
+if (slug === 'al-fatiha') {
+  return Astro.redirect('/work/qargha-refugee-camp/');
+}
+
+if (!project || !slug) {
+  return Astro.rewrite('/404/');
+}
+
+const description = `${project.title} — ${project.dateLabel} · ${project.location}. Film & photography by Garrett Gunther.`;
+const ogImage = project.gallery[0] ? `/media/${project.slug}/${project.gallery[0]}` : undefined;
+const currentIndex = projects.findIndex((p) => p.slug === project.slug);
+const prevProject =
+  currentIndex >= 0 ? (currentIndex > 0 ? projects[currentIndex - 1] : projects[projects.length - 1]) : undefined;
+const nextProject =
+  currentIndex >= 0 ? (currentIndex < projects.length - 1 ? projects[currentIndex + 1] : projects[0]) : undefined;
+const showPrevNext =
+  projects.length > 1 && Boolean(prevProject && nextProject && prevProject.slug !== nextProject.slug);
+
+const hasHeroVideo = Boolean(
+  project.localVideo || project.vimeo.length > 0 || project.youtube.length > 0
+);
+const heroStillFile = !hasHeroVideo && project.gallery.length > 0 ? project.gallery[0] : null;
+const galleryRest = heroStillFile ? project.gallery.slice(1) : project.gallery;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'CreativeWork',
+  name: project.title,
+  dateCreated: project.sortDate.split('T')[0],
+  creator: {
+    '@type': 'Person',
+    name: 'Garrett Gunther',
+    url: 'https://garrettgunther.com/',
+  },
+  ...(project.location ? { locationCreated: { '@type': 'Place', name: project.location } } : {}),
+};
+---
+
+<BaseLayout
+  title={project.title}
+  description={description}
+  canonicalPath={`/work/${slug}/`}
+  ogImage={ogImage}
+  ogType="article"
+  jsonLd={jsonLd}
+>
+  <SiteHeader />
+  <main id="main" class="wrap project-detail">
+    <header class="project-detail__intro">
+      {
+        showPrevNext ? (
+          <nav class="detail-nav detail-nav--title" aria-label="Project pagination">
+            <div class="detail-nav__prev-next">
+              <a class="detail-nav__prev" href={`/work/${prevProject.slug}/`} aria-label={`Previous: ${prevProject.title}`}>
+                ← {prevProject.title}
+              </a>
+              <a class="detail-nav__next" href={`/work/${nextProject.slug}/`} aria-label={`Next: ${nextProject.title}`}>
+                {nextProject.title} →
+              </a>
+            </div>
+          </nav>
+        ) : null
+      }
+      <h1>{project.title}</h1>
+      <p class="meta">
+        {project.dateLabel}
+        <span class="u-muted"> | </span>
+        {project.location}
+      </p>
+    </header>
+
+    <div class="project-hero">
+      {
+        heroStillFile ? (
+          <div class="project-hero__inner project-hero__still">
+            <figure class="project-hero__figure">
+              <button
+                type="button"
+                class="gallery-open"
+                data-lightbox-src={`/media/${project.slug}/${heroStillFile}`}
+                data-lightbox-alt={`${project.title} — image 1`}
+                aria-label="Open hero image in modal"
+              >
+                <img
+                  src={`/media/${project.slug}/${heroStillFile}`}
+                  alt={`${project.title} — image 1`}
+                  loading="eager"
+                  decoding="async"
+                  width="1600"
+                  height="1067"
+                />
+              </button>
+            </figure>
+          </div>
+        ) : null
+      }
+      {
+        project.localVideo ? (
+          <div class="project-hero__inner embed">
+            <video controls playsinline preload="metadata" aria-label={`${project.title} — film`}>
+              <source src={project.localVideo} type="video/mp4" />
+            </video>
+          </div>
+        ) : null
+      }
+      {
+        project.vimeo.map((id, i) => (
+          <div class="project-hero__inner embed">
+            <iframe
+              title={`${project.title} — video ${i + 1}`}
+              src={`https://player.vimeo.com/video/${id}`}
+              allow="autoplay; fullscreen; picture-in-picture"
+              allowfullscreen
+              loading={i === 0 ? 'eager' : 'lazy'}
+            />
+          </div>
+        ))
+      }
+      {
+        project.youtube.map((id, i) => (
+          <div class="project-hero__inner embed">
+            <iframe
+              title={`${project.title} — video ${(project.localVideo ? 1 : 0) + project.vimeo.length + i + 1}`}
+              src={`https://www.youtube-nocookie.com/embed/${id}`}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowfullscreen
+              loading={project.vimeo.length === 0 && i === 0 ? 'eager' : 'lazy'}
+            />
+          </div>
+        ))
+      }
+    </div>
+
+    {
+      galleryRest.length > 0 ? (
+        <div class="gallery">
+          {galleryRest.map((file, i) => {
+            const n = heroStillFile ? i + 2 : i + 1;
+            return (
+              <figure>
+                <button
+                  type="button"
+                  class="gallery-open"
+                  data-lightbox-src={`/media/${project.slug}/${file}`}
+                  data-lightbox-alt={`${project.title} — image ${n}`}
+                  aria-label={`Open image ${n} in modal`}
+                >
+                  <img
+                    src={`/media/${project.slug}/${file}`}
+                    alt={`${project.title} — image ${n}`}
+                    loading="lazy"
+                    decoding="async"
+                    width="1600"
+                    height="1067"
+                  />
+                </button>
+              </figure>
+            );
+          })}
+        </div>
+      ) : null
+    }
+
+    {
+      showPrevNext ? (
+        <nav class="detail-nav detail-nav--end" aria-label="Project pagination">
+          <div class="detail-nav__prev-next">
+            <a class="detail-nav__prev" href={`/work/${prevProject.slug}/`} aria-label={`Previous: ${prevProject.title}`}>
+              ← {prevProject.title}
+            </a>
+            <a class="detail-nav__next" href={`/work/${nextProject.slug}/`} aria-label={`Next: ${nextProject.title}`}>
+              {nextProject.title} →
+            </a>
+          </div>
+        </nav>
+      ) : null
+    }
+  </main>
+</BaseLayout>

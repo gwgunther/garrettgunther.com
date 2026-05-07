@@ -1,0 +1,63 @@
+---
+import '../styles/global.css';
+import GoogleAnalytics from '../components/GoogleAnalytics.astro';
+import LightboxModal from '../components/LightboxModal.astro';
+
+type Props = {
+  title: string;
+  description: string;
+  canonicalPath: string;
+  ogImage?: string;
+  ogType?: string;
+  jsonLd?: Record<string, unknown>;
+};
+
+const { title, description, canonicalPath, ogImage, ogType = 'website', jsonLd } = Astro.props;
+
+const site = Astro.site?.href ?? 'https://garrettgunther.com';
+const canonical = new URL(canonicalPath.replace(/^\//, ''), site).href;
+const defaultOg = `${site}favicon.png`;
+const og = ogImage ? new URL(ogImage.replace(/^\//, ''), site).href : defaultOg;
+const fullTitle = title === 'Garrett Gunther' ? title : `${title} · Garrett Gunther`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f2f1ee" />
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:image" content={og} />
+    <meta property="og:locale" content="en_US" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={og} />
+    <link rel="icon" href="/favicon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Inter+Tight:ital,wght@0,300;0,400;0,500;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <GoogleAnalytics />
+    {
+      jsonLd ? (
+        <script type="application/ld+json" is:inline set:html={JSON.stringify(jsonLd)} />
+      ) : null
+    }
+    <title>{fullTitle}</title>
+  </head>
+  <body>
+    <a class="sr-only" href="#main">Skip to content</a>
+    <slot />
+    <LightboxModal />
+  </body>
+</html>

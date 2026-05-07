@@ -1,0 +1,431 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import { loadProjects, projectYears } from '../utils/projects';
+
+const projects = loadProjects();
+const archiveYears = projectYears(projects);
+const sorted = [...projects].sort(
+  (a, b) => new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime()
+);
+
+let prevYear: number | null = null;
+const gridItems = sorted.map((p) => {
+  const year = new Date(p.sortDate).getFullYear();
+  const isFirstOfYear = year !== prevYear;
+  prevYear = year;
+  const anchorId = isFirstOfYear ? `y-${year}` : undefined;
+  return { p, year, anchorId, isFirstOfYear, cardId: `work-${p.slug}` };
+});
+
+const sortedDates = sorted.map((p) => new Date(p.sortDate).getTime());
+const newestDate = Math.max(...sortedDates);
+const oldestDate = Math.min(...sortedDates);
+const newestYear = new Date(newestDate).getFullYear();
+const oldestYear = new Date(oldestDate).getFullYear();
+const dateRange = Math.max(newestDate - oldestDate, 1);
+const timelinePosition = (date: string) =>
+  ((new Date(date).getTime() - oldestDate) / dateRange) * 100;
+const clampPosition = (position: number) => Math.min(100, Math.max(0, position));
+
+const timelinePosts = gridItems.map(({ p, cardId, year }) => ({
+  cardId,
+  title: p.title,
+  year,
+  position: clampPosition(timelinePosition(p.sortDate)),
+}));
+
+const timelineYears = Array.from(
+  { length: newestYear - oldestYear + 1 },
+  (_, i) => oldestYear + i
+).map((year) => ({
+  year,
+  position: clampPosition(timelinePosition(`${year}-01-01`)),
+}));
+
+const pageDesc =
+  'Complete portfolio — film, photography, and creative direction by Garrett Gunther.';
+---
+
+<BaseLayout
+  title="All work — Garrett Gunther"
+  description={pageDesc}
+  canonicalPath="/all/"
+>
+  <SiteHeader currentView="all" />
+  <main id="main">
+    <nav class="all-years wrap" aria-label="Project timeline">
+      <h1 class="all-page-title all-page-title--timeline">All projects</h1>
+      <div class="all-years__rail">
+        <div class="all-years__line" aria-hidden="true"></div>
+        <div
+          class="all-years__cursor"
+          role="slider"
+          tabindex="0"
+          aria-label="Timeline position"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="100"
+        ></div>
+        <ul class="all-years__ticks" aria-hidden="true">
+          {
+            timelineYears.map(({ year, position }) => (
+              <li class="all-years__tick" style={`--timeline-x: ${position}%`}>
+                <span class="all-years__tick-line"></span>
+                <span class="all-years__label">{year}</span>
+              </li>
+            ))
+          }
+        </ul>
+        <ul class="all-years__posts">
+          {
+            timelinePosts.map(({ cardId, title, year, position }) => (
+              <li class="all-years__post" style={`--timeline-x: ${position}%`}>
+                <a
+                  class="all-years__post-marker"
+                  href={`#${cardId}`}
+                  data-card-id={cardId}
+                  data-timeline-x={position}
+                  aria-label={`Jump to ${title}, ${year}`}
+                ></a>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </nav>
+
+    <div id="work" class="wrap all-work-grid">
+      <div class="project-grid">
+        {
+          gridItems.map(({ p, year, anchorId, isFirstOfYear, cardId }, i) => {
+            const hero = p.gallery[0];
+            const vimeoId = p.vimeo[0];
+            const youtubeId = !vimeoId ? p.youtube[0] : undefined;
+            const localVideo = p.localVideo;
+            const hasVideo = Boolean(localVideo || vimeoId || youtubeId);
+            const hasPhotos = p.gallery.length > 0;
+            const workHref = `/work/${p.slug}/`;
+            const eagerMedia = i < 3;
+
+            return (
+              <article
+                class:list={[
+                  'project-card',
+                  'project-card--grid',
+                  { 'project-card--year-start': isFirstOfYear },
+                ]}
+                id={cardId}
+                data-card-id={cardId}
+              >
+                {
+                  isFirstOfYear && (
+                    <span class="project-year-marker" id={anchorId} aria-label={`${year} projects`}>
+                      <span>{year}</span>
+                    </span>
+                  )
+                }
+                {hero ? (
+                  <a href={workHref} class="project-card__thumb project-card__thumb-link">
+                    <img
+                      src={`/media/${p.slug}/${hero}`}
+                      alt=""
+                      loading={eagerMedia ? 'eager' : 'lazy'}
+                      decoding="async"
+                      width="640"
+                      height="400"
+                    />
+                  </a>
+                ) : hasVideo ? (
+                  <a href={workHref} class="project-card__thumb project-card__thumb-link project-card__thumb--embed">
+                    {
+                      localVideo ? (
+                        <video
+                          muted
+                          loop
+                          autoplay
+                          playsinline
+                          preload={eagerMedia ? 'metadata' : 'none'}
+                          aria-label={`${p.title} preview`}
+                        >
+                          <source src={localVideo} type="video/mp4" />
+                        </video>
+                      ) : vimeoId ? (
+                        <iframe
+                          title={`${p.title} preview`}
+                          src={`https://player.vimeo.com/video/${vimeoId}?background=1&autopause=1&muted=1`}
+                          allow="autoplay; fullscreen; picture-in-picture"
+                          allowfullscreen
+                          loading={eagerMedia ? 'eager' : 'lazy'}
+                        />
+                      ) : youtubeId ? (
+                        <iframe
+                          title={`${p.title} preview`}
+                          src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&mute=1&playsinline=1&controls=0&rel=0`}
+                          allow="autoplay; encrypted-media; picture-in-picture"
+                          allowfullscreen
+                          loading={eagerMedia ? 'eager' : 'lazy'}
+                        />
+                      ) : (
+                        <span class="project-card__thumb-fallback" aria-hidden="true">
+                          Film
+                        </span>
+                      )
+                    }
+                  </a>
+                ) : (
+                  <a href={workHref} class="project-card__thumb project-card__thumb-link">
+                    <span class="project-card__thumb-fallback" aria-hidden="true">
+                      Project
+                    </span>
+                  </a>
+                )}
+                <a href={workHref} class="project-card__grid-link">
+                  <div class="project-card__grid-copy">
+                    <div class="project-card__grid-title-row">
+                      <h2 class="project-card__grid-title">{p.title}</h2>
+                      {
+                        (hasVideo || hasPhotos) && (
+                          <span class="project-card__type-icons project-card__type-icons--grid" aria-label={`${p.title} media types`}>
+                            {
+                              hasVideo ? (
+                                <span class="project-card__type-icon" title="Includes film">
+                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <rect x="3" y="6" width="12.5" height="12" rx="1.5" stroke="currentColor" stroke-width="1.5" />
+                                    <path fill="currentColor" stroke="none" d="M18 9.5 22 12l-4 2.5V9.5Z" />
+                                  </svg>
+                                </span>
+                              ) : null
+                            }
+                            {
+                              hasPhotos ? (
+                                <span class="project-card__type-icon" title="Includes photography">
+                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <rect x="3.25" y="5.25" width="17.5" height="13.5" rx="2" stroke="currentColor" stroke-width="1.5" />
+                                    <circle cx="9" cy="10" r="1.5" fill="currentColor" stroke="none" />
+                                    <path
+                                      d="M3.5 17.5 8 12l3.5 3.5 3-3L20.5 18"
+                                      stroke="currentColor"
+                                      stroke-width="1.5"
+                                      stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                    />
+                                  </svg>
+                                </span>
+                              ) : null
+                            }
+                          </span>
+                        )
+                      }
+                    </div>
+                    <p class="project-card__meta">
+                      <span class="sr-only">{year}, </span>
+                      {p.dateLabel}
+                    </p>
+                  </div>
+                </a>
+              </article>
+            );
+          })
+        }
+      </div>
+    </div>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <div class="site-social">
+          <a href="https://instagram.com/gwgunther" target="_blank" rel="noopener noreferrer">Instagram</a>
+          <a href="https://www.linkedin.com/in/garrett-gunther-55b1a624/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <script is:inline>
+    if (typeof window !== 'undefined') {
+      const header = document.querySelector('.site-header');
+      const headerHeight = header ? header.getBoundingClientRect().height : 0;
+      const timeline = document.querySelector('.all-years');
+      const rail = document.querySelector('.all-years__rail');
+      const cursor = document.querySelector('.all-years__cursor');
+      const topOffset = headerHeight + (timeline ? timeline.getBoundingClientRect().height : 0) + 12;
+      let isDraggingTimeline = false;
+      let pendingDragPercent = null;
+      let dragFrame = 0;
+      let selectedCard = null;
+
+      const markers = Array.from(
+        document.querySelectorAll('.all-years__post-marker[data-card-id]')
+      );
+
+      const cards = markers
+        .map((marker) => {
+          const cardId = marker.dataset.cardId;
+          const el = cardId ? document.getElementById(cardId) : null;
+          return el ? { marker, el } : null;
+        })
+        .filter(Boolean);
+
+      const timelineCards = [...cards].sort((a, b) => {
+        return Number(a.marker.dataset.timelineX ?? 0) - Number(b.marker.dataset.timelineX ?? 0);
+      });
+
+      function clampPercent(percent) {
+        return Math.min(100, Math.max(0, percent));
+      }
+
+      function percentFromPointer(clientX) {
+        if (!rail) return 0;
+        const rect = rail.getBoundingClientRect();
+        if (!rect.width) return 0;
+        return clampPercent(((clientX - rect.left) / rect.width) * 100);
+      }
+
+      function closestCardToPercent(percent) {
+        return cards.reduce((closest, card) => {
+          const cardPercent = Number(card.marker.dataset.timelineX ?? 0);
+          const closestPercent = Number(closest.marker.dataset.timelineX ?? 0);
+          return Math.abs(cardPercent - percent) < Math.abs(closestPercent - percent)
+            ? card
+            : closest;
+        }, cards[0]);
+      }
+
+      function setActiveCard(active) {
+        if (!active || !cursor) return;
+
+        for (const { marker } of cards) {
+          marker.classList.toggle('is-active', marker === active.marker);
+        }
+
+        const percent = active.marker.dataset.timelineX ?? 0;
+        cursor.style.left = `${percent}%`;
+        cursor.setAttribute('aria-valuenow', String(Math.round(Number(percent))));
+      }
+
+      function setSelectedCard(active) {
+        selectedCard = active ?? null;
+
+        for (const { marker } of cards) {
+          marker.classList.toggle('is-selected', selectedCard?.marker === marker);
+        }
+
+        if (selectedCard) {
+          setActiveCard(selectedCard);
+        }
+      }
+
+      function scrollToCard(active, behavior) {
+        if (!active) return;
+
+        const top = active.el.getBoundingClientRect().top + window.scrollY - topOffset;
+        window.scrollTo({
+          top,
+          behavior,
+        });
+      }
+
+      function dragToPercent(percent) {
+        if (!cursor || !cards.length) return;
+
+        const active = closestCardToPercent(percent);
+        setSelectedCard(active);
+        scrollToCard(active, 'auto');
+      }
+
+      function setActivePost() {
+        if (!cards.length || !cursor || isDraggingTimeline || selectedCard) return;
+
+        const viewportBottom = window.innerHeight || document.documentElement.clientHeight;
+        const visibleCards = cards
+          .map((card) => ({
+            ...card,
+            rect: card.el.getBoundingClientRect(),
+          }))
+          .filter(({ rect }) => rect.bottom > topOffset && rect.top < viewportBottom)
+          .sort((a, b) => {
+            const rowDelta = Math.abs(a.rect.top - b.rect.top);
+            if (rowDelta > 8) return a.rect.top - b.rect.top;
+            return a.rect.left - b.rect.left;
+          });
+
+        const active = visibleCards[0] ?? cards[0];
+
+        setActiveCard(active);
+      }
+
+      function flushDragFrame() {
+        dragFrame = 0;
+        if (pendingDragPercent === null) return;
+        dragToPercent(pendingDragPercent);
+      }
+
+      if (rail && cursor) {
+        rail.addEventListener('pointerdown', (event) => {
+          if (!cards.length) return;
+          event.preventDefault();
+          isDraggingTimeline = true;
+          rail.setPointerCapture(event.pointerId);
+          pendingDragPercent = percentFromPointer(event.clientX);
+          if (!dragFrame) {
+            dragFrame = window.requestAnimationFrame(flushDragFrame);
+          }
+        });
+
+        rail.addEventListener('pointermove', (event) => {
+          if (!isDraggingTimeline) return;
+          pendingDragPercent = percentFromPointer(event.clientX);
+          if (!dragFrame) {
+            dragFrame = window.requestAnimationFrame(flushDragFrame);
+          }
+        });
+
+        rail.addEventListener('pointerup', (event) => {
+          if (!isDraggingTimeline) return;
+          isDraggingTimeline = false;
+          if (pendingDragPercent !== null) {
+            const active = closestCardToPercent(pendingDragPercent);
+            setSelectedCard(active);
+            scrollToCard(active, 'auto');
+          }
+          rail.releasePointerCapture(event.pointerId);
+        });
+
+        rail.addEventListener('pointercancel', (event) => {
+          isDraggingTimeline = false;
+          rail.releasePointerCapture(event.pointerId);
+        });
+
+        cursor.addEventListener('keydown', (event) => {
+          if (!cards.length || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return;
+          event.preventDefault();
+
+          const activeIndex = timelineCards.findIndex(({ marker }) => marker.classList.contains('is-active'));
+          const fallbackIndex = activeIndex === -1 ? 0 : activeIndex;
+          const nextIndex = event.key === 'ArrowRight'
+            ? Math.min(timelineCards.length - 1, fallbackIndex + 1)
+            : Math.max(0, fallbackIndex - 1);
+          const active = timelineCards[nextIndex];
+
+          setActiveCard(active);
+          setSelectedCard(active);
+          scrollToCard(active, 'smooth');
+        });
+
+        markers.forEach((marker) => {
+          marker.addEventListener('click', (event) => {
+            event.preventDefault();
+            const active = cards.find((card) => card.marker === marker);
+            if (!active) return;
+            setSelectedCard(active);
+            scrollToCard(active, 'smooth');
+          });
+        });
+      }
+
+      window.addEventListener('scroll', setActivePost, { passive: true });
+      window.addEventListener('resize', setActivePost);
+      setActivePost();
+    }
+  </script>
+</BaseLayout>

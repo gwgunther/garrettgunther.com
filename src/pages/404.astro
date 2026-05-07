@@ -1,0 +1,21 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+---
+
+<BaseLayout
+  title="Page not found"
+  description="That page does not exist. Return to Garrett Gunther’s portfolio."
+  canonicalPath="/404/"
+>
+  <SiteHeader />
+  <main id="main" class="not-found">
+    <h1>Not what you’re looking for</h1>
+    <p class="u-muted" style="max-width: 26rem">
+      This URL may be out of date. Try the home page to browse recent work.
+    </p>
+    <p style="margin-top: var(--space-lg)">
+      <a href="/">Back home</a>
+    </p>
+  </main>
+</BaseLayout>

@@ -1,0 +1,115 @@
+---
+import type { Project } from '../utils/projects';
+
+type Props = {
+  project: Project;
+  /** Eager-load embeds for first items above the fold */
+  isPriority: boolean;
+  animationIndex: number;
+};
+
+const { project: p, isPriority, animationIndex } = Astro.props;
+
+const hero = p.gallery[0];
+const localVideo = p.localVideo;
+const vimeoId = p.vimeo[0];
+const youtubeId = !vimeoId ? p.youtube[0] : undefined;
+const hasVideo = Boolean(localVideo || vimeoId || youtubeId);
+const hasPhotos = p.gallery.length > 0;
+const isEmbed = hasVideo;
+---
+
+<article class="project-card" style={{ animationDelay: `${Math.min(animationIndex, 8) * 0.04}s` }}>
+  <div class:list={['project-card__media', { 'project-card__media--embed': isEmbed }]}>
+    {
+      localVideo ? (
+        <video controls playsinline preload={isPriority ? 'metadata' : 'none'} aria-label={`${p.title} — film`}>
+          <source src={localVideo} type="video/mp4" />
+        </video>
+      ) : vimeoId ? (
+        <iframe
+          title={`${p.title} — film`}
+          src={`https://player.vimeo.com/video/${vimeoId}`}
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowfullscreen
+          loading={isPriority ? 'eager' : 'lazy'}
+        />
+      ) : youtubeId ? (
+        <iframe
+          title={`${p.title} — film`}
+          src={`https://www.youtube-nocookie.com/embed/${youtubeId}`}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen
+          loading={isPriority ? 'eager' : 'lazy'}
+        />
+      ) : hero ? (
+        <a href={`/work/${p.slug}/`}>
+          <img
+            src={`/media/${p.slug}/${hero}`}
+            alt=""
+            loading={isPriority ? 'eager' : 'lazy'}
+            fetchpriority={isPriority ? 'high' : undefined}
+            decoding="async"
+            width="1200"
+            height="900"
+          />
+        </a>
+      ) : (
+        <a href={`/work/${p.slug}/`} class="u-muted" style="display: grid; place-items: center; min-height: 12rem; padding: var(--space-md)">
+          View project
+        </a>
+      )
+    }
+  </div>
+  <div class="project-card__copy">
+    <div class="project-card__title-row">
+      <h2>
+        <a href={`/work/${p.slug}/`}>{p.title}</a>
+      </h2>
+      {
+        (hasVideo || hasPhotos) && (
+          <a
+            href={`/work/${p.slug}/`}
+            class="project-card__type-icons"
+            aria-label={`Open ${p.title}`}
+          >
+            {
+              hasVideo ? (
+                <span class="project-card__type-icon" title="Includes film">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <rect x="3" y="6" width="12.5" height="12" rx="1.5" stroke="currentColor" stroke-width="1.5" />
+                    <path fill="currentColor" stroke="none" d="M18 9.5 22 12l-4 2.5V9.5Z" />
+                  </svg>
+                </span>
+              ) : null
+            }
+            {
+              hasPhotos ? (
+                <span class="project-card__type-icon" title="Includes photography">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <rect x="3.25" y="5.25" width="17.5" height="13.5" rx="2" stroke="currentColor" stroke-width="1.5" />
+                    <circle cx="9" cy="10" r="1.5" fill="currentColor" stroke="none" />
+                    <path
+                      d="M3.5 17.5 8 12l3.5 3.5 3-3L20.5 18"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </span>
+              ) : null
+            }
+          </a>
+        )
+      }
+    </div>
+    <p class="project-card__meta">
+      <a href={`/work/${p.slug}/`} class="project-card__meta-link">
+        {p.dateLabel}
+        <span class="u-muted"> · </span>
+        {p.location}
+      </a>
+    </p>
+  </div>
+</article>

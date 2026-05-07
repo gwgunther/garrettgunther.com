@@ -1,0 +1,27 @@
+---
+type Props = {
+  /** Pass when on `/all/` to highlight the index link */
+  currentView?: 'all';
+};
+
+const { currentView } = Astro.props;
+---
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <p class="site-title">
+      <a href="/">Garrett Gunther</a>
+    </p>
+    <div class="site-header__end">
+      <nav aria-label="Work index">
+        <ul class="site-nav-main">
+          <li>
+            <a href={currentView === 'all' ? '/' : '/all/#work'} class:list={{ 'is-active': currentView !== 'all' }}>
+              {currentView === 'all' ? 'Home' : 'All projects'}
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+</header>

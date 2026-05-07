@@ -1,0 +1,85 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import FeaturedProjectCard from '../components/FeaturedProjectCard.astro';
+import { featuredProjects, loadProjects } from '../utils/projects';
+
+const projects = loadProjects();
+const featured = featuredProjects(projects);
+
+const siteJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'Garrett Gunther',
+  url: 'https://garrettgunther.com/',
+  description:
+    '2x Stanford engineer & former athlete. Video, photo, code. Bad French, worse Flemish.',
+  author: {
+    '@type': 'Person',
+    name: 'Garrett Gunther',
+    url: 'https://garrettgunther.com/',
+  },
+};
+---
+
+<BaseLayout
+  title="Garrett Gunther"
+  description="2x Stanford engineer & former athlete. Video, photo, code. Bad French, worse Flemish."
+  canonicalPath="/"
+  jsonLd={siteJsonLd}
+>
+  <SiteHeader />
+  <main id="main">
+    <section class="intro wrap intro--home-fixed">
+      <p class="intro__lead">
+        2x Stanford engineer & former athlete. Video, photo, code. Bad French, worse Flemish.
+      </p>
+      <div class="intro-columns">
+        <ul class="intro-column intro-column--work">
+          <li>
+            <a class="intro-line__link intro-work-link" href="https://www.vector.tv/">
+              <span class="intro-work-link__num">I</span>
+              <span class="intro-work-link__name">Maku (now Vector)</span>
+            </a>
+          </li>
+          <li>
+            <a class="intro-line__link intro-work-link" href="https://rickhousemedia.com">
+              <span class="intro-work-link__num">II</span>
+              <span class="intro-work-link__name">Rickhouse</span>
+            </a>
+          </li>
+          <li>
+            <a class="intro-line__link intro-work-link" href="https://consigliere.com">
+              <span class="intro-work-link__num">III</span>
+              <span class="intro-work-link__name">Consigliere</span>
+            </a>
+          </li>
+        </ul>
+        <ul class="intro-column intro-column--social">
+          <li><a class="intro-line__link" href="https://instagram.com/gwgunther" target="_blank" rel="noopener noreferrer">Instagram</a></li>
+          <li><a class="intro-line__link" href="https://www.linkedin.com/in/garrett-gunther-55b1a624/" target="_blank" rel="noopener noreferrer">LinkedIn</a></li>
+        </ul>
+      </div>
+      <h2 class="featured-label featured-label--fixed">Favorites</h2>
+    </section>
+
+    <div id="work" class="wrap home-work">
+      <div class="project-list">
+        {
+          featured.map((p, i) => (
+            <FeaturedProjectCard project={p} isPriority={i < 2} animationIndex={i} />
+          ))
+        }
+      </div>
+    </div>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <div class="site-social">
+          <a href="https://instagram.com/gwgunther" target="_blank" rel="noopener noreferrer">Instagram</a>
+          <a href="https://www.linkedin.com/in/garrett-gunther-55b1a624/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        </div>
+      </div>
+    </footer>
+  </main>
+</BaseLayout>

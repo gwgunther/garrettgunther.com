@@ -1,0 +1,42 @@
+<div id="lightbox-modal" class="lightbox-modal" aria-hidden="true" role="dialog" aria-label="Expanded image view">
+  <button id="lightbox-close" class="lightbox-close" type="button" aria-label="Close image modal">×</button>
+  <img id="lightbox-image" class="lightbox-image" src="" alt="" />
+</div>
+
+<script is:inline>
+  const modal = document.getElementById('lightbox-modal');
+  const image = document.getElementById('lightbox-image');
+  const closeBtn = document.getElementById('lightbox-close');
+
+  const openModal = (src, alt = '') => {
+    if (!modal || !image) return;
+    image.src = src;
+    image.alt = alt;
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  };
+
+  const closeModal = () => {
+    if (!modal || !image) return;
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    image.src = '';
+    document.body.style.overflow = '';
+  };
+
+  document.addEventListener('click', (event) => {
+    const trigger = event.target.closest('[data-lightbox-src]');
+    if (trigger) {
+      event.preventDefault();
+      openModal(trigger.getAttribute('data-lightbox-src'), trigger.getAttribute('data-lightbox-alt') || '');
+      return;
+    }
+    if (event.target === modal) closeModal();
+  });
+
+  closeBtn?.addEventListener('click', closeModal);
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeModal();
+  });
+</script>

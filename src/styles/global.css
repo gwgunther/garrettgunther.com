@@ -216,6 +216,10 @@ a:hover {
   padding-block: var(--space-xl) var(--space-lg);
 }
 
+.intro--home {
+  padding-bottom: var(--space-sm);
+}
+
 .home-work {
   padding-top: 0;
 }
@@ -255,6 +259,10 @@ a:hover {
   color: #000;
   border-bottom: 1px solid var(--border);
   padding-bottom: var(--space-sm);
+}
+
+.intro-columns + .featured-label {
+  margin-top: var(--space-md);
 }
 
 .year-label {
@@ -572,27 +580,16 @@ a:hover {
 }
 
 .all-years {
-  position: fixed;
-  top: calc(var(--space-md) + var(--header-height));
-  left: 50%;
-  z-index: 45;
-  width: min(100% - var(--space-lg), var(--max-w));
-  margin-bottom: 0;
+  position: relative;
+  z-index: 1;
+  margin-bottom: var(--space-sm);
   padding-block: var(--space-lg) var(--space-lg);
   border-bottom: 1px solid var(--border);
   background: var(--bg);
-  transform: translateX(-50%);
 }
 
 .all-years::before {
-  content: "";
-  position: absolute;
-  inset-block: 0;
-  left: 50%;
-  z-index: -1;
-  width: 100vw;
-  background: var(--bg);
-  transform: translateX(-50%);
+  content: none;
 }
 
 .all-years__rail {
@@ -770,7 +767,6 @@ a:hover {
 
 @media (max-width: 640px) {
   .all-years {
-    top: calc(var(--space-md) + var(--header-height));
     padding-block: var(--space-sm) var(--space-md);
   }
 
@@ -790,16 +786,16 @@ a:hover {
   animation: rise 0.85s var(--ease-out) both;
 }
 
-/* Homepage featured: still images 4:3; all video embeds 16:9 (no letterboxing in frame). */
-.project-list .project-card__media {
+/* Homepage featured cards: same component treatment as grid, but larger full-width media. */
+.project-list .project-card--home .project-card__thumb {
   aspect-ratio: 4 / 3;
 }
 
-.project-list .project-card__media--embed {
+.project-list .project-card--home .project-card__thumb--embed {
   aspect-ratio: 16 / 9;
 }
 
-.project-list .project-card__media--embed > video {
+.project-list .project-card--home .project-card__thumb--embed > video {
   object-fit: cover;
 }
 
@@ -958,7 +954,7 @@ a:hover {
 
 /* --- All projects grid --- */
 .all-work-grid {
-  padding-top: 14.25rem;
+  padding-top: var(--space-md);
   padding-bottom: var(--space-xl);
 }
 

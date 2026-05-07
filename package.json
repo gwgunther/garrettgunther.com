@@ -10,6 +10,7 @@
     "dev": "astro dev",
     "extract": "node scripts/migrate-from-webflow.mjs",
     "bootstrap-media": "node scripts/bootstrap-media-source.mjs",
+    "compress-video": "node scripts/compress-video.mjs",
     "sync-media": "node scripts/sync-media.mjs",
     "prebuild": "node scripts/sync-media.mjs",
     "build": "astro build",

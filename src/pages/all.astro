@@ -237,10 +237,9 @@ const pageDesc =
     if (typeof window !== 'undefined') {
       const header = document.querySelector('.site-header');
       const headerHeight = header ? header.getBoundingClientRect().height : 0;
-      const timeline = document.querySelector('.all-years');
       const rail = document.querySelector('.all-years__rail');
       const cursor = document.querySelector('.all-years__cursor');
-      const topOffset = headerHeight + (timeline ? timeline.getBoundingClientRect().height : 0) + 12;
+      const topOffset = headerHeight + 12;
       let isDraggingTimeline = false;
       let pendingDragPercent = null;
       let dragFrame = 0;

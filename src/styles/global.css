@@ -20,7 +20,8 @@
   --space-md: 1.25rem;
   --space-lg: 2.5rem;
   --space-xl: 4.5rem;
-  --max-w: 1080px;
+  --max-w: 918px;
+  --header-height: 3.25rem;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -31,6 +32,7 @@
 }
 
 html {
+  font-size: 85%;
   scroll-behavior: smooth;
   background: var(--bg);
 }
@@ -52,6 +54,7 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
+  padding-top: calc(var(--space-md) + var(--header-height));
   font-family: var(--font-ui);
   font-weight: 300;
   font-size: 1rem;
@@ -102,8 +105,10 @@ a:hover {
 
 /* --- Header --- */
 .site-header {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 50;
   background: var(--bg);
   padding-block: var(--space-md);
@@ -153,15 +158,21 @@ a:hover {
   list-style: none;
   margin: 0;
   padding: 0;
-  font-size: 0.62rem;
+  line-height: 1;
+}
+
+.site-nav-main,
+.featured-label,
+.all-page-title {
+  font-size: 0.68rem;
   font-weight: 600;
-  letter-spacing: var(--type-label-tracking);
+  letter-spacing: 0.17em;
   text-transform: uppercase;
   line-height: 1;
 }
 
 .site-nav-main a {
-  color: #000;
+  color: var(--accent);
   text-decoration: none;
 }
 
@@ -184,11 +195,11 @@ a:hover {
 
 
 .site-social a {
-  color: #000;
+  color: var(--accent);
   text-decoration: none;
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: var(--type-label-tracking);
+  font-size: 0.68rem;
+  font-weight: 400;
+  letter-spacing: 0.17em;
   text-transform: uppercase;
   line-height: 1;
   opacity: 0.95;
@@ -207,7 +218,7 @@ a:hover {
 
 .intro--home-fixed {
   position: fixed;
-  top: calc(var(--space-md) + 3.25rem);
+  top: calc(var(--space-md) + var(--header-height));
   left: 50%;
   z-index: 45;
   width: min(100% - var(--space-lg), var(--max-w));
@@ -263,10 +274,6 @@ a:hover {
 .featured-label {
   margin: 0 0 var(--space-md);
   font-family: var(--font-ui);
-  font-size: var(--type-label-size);
-  font-weight: var(--type-label-weight);
-  letter-spacing: var(--type-label-tracking);
-  text-transform: uppercase;
   color: #000;
   border-bottom: 1px solid var(--border);
   padding-bottom: var(--space-sm);
@@ -324,11 +331,15 @@ a:hover {
 }
 
 .intro-column li {
-  margin: 0.2rem 0 0;
+  margin: 0;
   font-size: var(--type-body-size);
   letter-spacing: var(--type-body-tracking);
-  line-height: 1.5;
+  line-height: 1;
   color: var(--text-muted);
+}
+
+.intro-column li + li {
+  margin-top: 0;
 }
 
 .intro-column--social {
@@ -367,12 +378,12 @@ a:hover {
 }
 
 .intro-line__link {
-  color: #000;
+  color: var(--accent);
   text-decoration: none;
-  font-size: 0.62rem;
-  font-weight: 600;
+  font-size: 0.68rem;
+  font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: var(--type-label-tracking);
+  letter-spacing: 0.17em;
   line-height: 1;
 }
 
@@ -580,12 +591,7 @@ a:hover {
 .all-page-title {
   margin: 0 0 var(--space-sm);
   font-family: var(--font-ui);
-  font-weight: 400;
-  font-size: var(--type-label-size);
-  line-height: 1;
-  letter-spacing: var(--type-label-tracking);
-  text-transform: uppercase;
-  color: #000;
+  color: var(--accent);
 }
 
 .all-page-title--timeline {
@@ -594,7 +600,7 @@ a:hover {
 
 .all-years {
   position: fixed;
-  top: calc(var(--space-md) + 3.25rem);
+  top: calc(var(--space-md) + var(--header-height));
   left: 50%;
   z-index: 45;
   width: min(100% - var(--space-lg), var(--max-w));
@@ -695,9 +701,9 @@ a:hover {
 
 .all-years__label {
   font-family: var(--font-ui);
-  font-size: var(--type-label-size);
-  font-weight: var(--type-label-weight);
-  letter-spacing: var(--type-label-tracking);
+  font-size: 0.68rem;
+  font-weight: 400;
+  letter-spacing: 0.17em;
   line-height: 1;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -785,14 +791,10 @@ a:hover {
 
 @media (max-width: 640px) {
   .all-years {
-    top: calc(var(--space-md) + 2.8rem);
+    top: calc(var(--space-md) + var(--header-height));
     padding-block: var(--space-sm) var(--space-md);
   }
 
-  .all-years__label {
-    font-size: 0.56rem;
-    letter-spacing: 0.14em;
-  }
 }
 
 .project-list {

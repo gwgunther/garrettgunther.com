@@ -220,6 +220,7 @@ a:hover {
   padding-bottom: var(--space-sm);
 }
 
+
 .home-work {
   padding-top: 0;
 }
@@ -264,6 +265,7 @@ a:hover {
 .intro-columns + .featured-label {
   margin-top: var(--space-md);
 }
+
 
 .year-label {
   margin: 0 0 var(--space-md);

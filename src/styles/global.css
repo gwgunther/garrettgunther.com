@@ -684,6 +684,12 @@ a:hover {
   white-space: nowrap;
 }
 
+@media (max-width: 560px) {
+  .all-years__ticks .all-years__tick:nth-child(even) {
+    visibility: hidden;
+  }
+}
+
 .all-years__posts {
   position: absolute;
   inset-inline: 0;

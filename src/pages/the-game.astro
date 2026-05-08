@@ -1,0 +1,555 @@
+---
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The Game</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #050a18;
+        font-family: Inter, system-ui, -apple-system, sans-serif;
+      }
+      .game {
+        position: fixed;
+        inset: 0;
+      }
+      .game canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      .game__hud {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+      .game__goal {
+        position: absolute;
+        right: clamp(0.85rem, 2.5vw, 2rem);
+        top: 50%;
+        transform: translateY(-50%);
+        width: clamp(78px, 8vw, 108px);
+        height: clamp(132px, 17vw, 188px);
+        border-top: 1px solid rgba(255, 255, 255, 0.72);
+        border-right: 1px solid rgba(255, 255, 255, 0.72);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.72);
+        border-left: 0;
+        background: transparent;
+      }
+      .game__lose {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        opacity: 0;
+        transition: opacity 350ms ease;
+      }
+      .game__lose.is-visible { opacity: 1; }
+      .game__lose p {
+        color: #f1f6ff;
+        font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
+        font-size: clamp(1rem, 2.1vw, 1.7rem);
+        letter-spacing: 0.02em;
+        background: transparent;
+        border: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="game" aria-label="Secret orb game">
+      <canvas class="game__mesh" id="meshGame"></canvas>
+      <div class="game__hud" aria-hidden="true">
+        <div class="game__goal" id="goal"></div>
+        <div class="game__lose" id="loseScreen">
+          <p>I just lost <em>the game</em></p>
+        </div>
+      </div>
+    </main>
+
+    <script type="x-shader/x-vertex" id="vert">
+      attribute vec2 a_pos;
+      varying vec2 v_uv;
+      void main() {
+        v_uv = a_pos * 0.5 + 0.5;
+        gl_Position = vec4(a_pos, 0.0, 1.0);
+      }
+    </script>
+
+    <script type="x-shader/x-fragment" id="frag">
+      precision highp float;
+      varying vec2 v_uv;
+      uniform float u_aspect;
+      uniform float u_time;
+      #define N_POINTS 10
+      uniform vec2 u_points[N_POINTS];
+      uniform vec3 u_colors[N_POINTS];
+      uniform float u_radii[N_POINTS];
+      uniform float u_power;
+      uniform vec3  u_baseColor;
+      uniform float u_baseStrength;
+      uniform vec3  u_waveDark;
+      uniform vec3  u_waveLight;
+      uniform float u_waveStrength;
+
+      float hash21(vec2 p){
+        p = fract(p * vec2(123.34, 456.21));
+        p += dot(p, p + 45.32);
+        return fract(p.x * p.y);
+      }
+
+      vec3 mod289_3(vec3 x){return x - floor(x*(1.0/289.0))*289.0;}
+      vec2 mod289_2(vec2 x){return x - floor(x*(1.0/289.0))*289.0;}
+      vec3 permute3(vec3 x){return mod289_3(((x*34.0)+1.0)*x);}
+
+      float snoise(vec2 v){
+        const vec4 C = vec4(0.211324865405187, 0.366025403784439,
+                           -0.577350269189626, 0.024390243902439);
+        vec2 i  = floor(v + dot(v, C.yy));
+        vec2 x0 = v -   i + dot(i, C.xx);
+        vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+        vec4 x12 = x0.xyxy + C.xxzz; x12.xy -= i1;
+        i = mod289_2(i);
+        vec3 p = permute3( permute3( i.y + vec3(0.0, i1.y, 1.0))
+                        + i.x + vec3(0.0, i1.x, 1.0));
+        vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+        m = m*m; m = m*m;
+        vec3 x = 2.0 * fract(p * C.www) - 1.0;
+        vec3 h = abs(x) - 0.5;
+        vec3 ox = floor(x + 0.5);
+        vec3 a0 = x - ox;
+        m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
+        vec3 g;
+        g.x  = a0.x  * x0.x  + h.x  * x0.y;
+        g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+        return 130.0 * dot(m, g);
+      }
+
+      float wavePattern(vec2 uv, float time) {
+        vec2 axis = normalize(vec2(0.18, 1.0));
+        float warp1 = snoise(vec2(uv.x * 1.2, uv.y * 0.8 + time * 0.05)) * 0.35;
+        float warp2 = snoise(vec2(uv.x * 0.6 + time * 0.03, uv.y * 1.4)) * 0.20;
+        vec2 warped = uv + vec2(warp1, warp2);
+        float w = dot(warped, axis) * 4.5 + time * 0.08;
+        float ribbon = sin(w) * 0.5 + 0.5;
+        float breath = 0.7 + 0.3 * sin(time * 0.15);
+        ribbon = pow(ribbon, mix(1.5, 0.7, breath));
+        return ribbon;
+      }
+
+      void main() {
+        vec2 uv = v_uv;
+        uv.x *= u_aspect;
+
+        vec3 blobSum = vec3(0.0);
+        float weightSum = 0.0;
+        for (int i = 0; i < N_POINTS; i++) {
+          vec2 p = u_points[i];
+          p.x *= u_aspect;
+          float d = max(distance(uv, p), 0.001);
+          float w = u_radii[i] / pow(d, u_power);
+          blobSum += u_colors[i] * w;
+          weightSum += w;
+        }
+        vec3 col = blobSum / max(weightSum, 0.0001);
+        float wave = wavePattern(v_uv, u_time);
+        wave = smoothstep(0.35, 0.85, wave);
+        float blobBrightness = (col.r + col.g + col.b) / 3.0;
+        float waveOpacity = u_waveStrength * (1.0 - blobBrightness * 1.2);
+        waveOpacity = max(waveOpacity, 0.0);
+        col += (u_waveLight - u_waveDark) * wave * waveOpacity;
+        col = mix(col, u_baseColor, u_baseStrength * 0.15);
+        float grainSeed = floor(u_time * 24.0) / 24.0;
+        float grain = (hash21(gl_FragCoord.xy + grainSeed) - 0.5) * 0.035;
+        float grainDensity = 0.7 + 0.3 * snoise(v_uv * 3.0 + u_time * 0.05);
+        col += grain * grainDensity;
+        gl_FragColor = vec4(col, 1.0);
+      }
+    </script>
+
+    <script>
+      (() => {
+        const canvas = document.getElementById('meshGame');
+        const goalEl = document.getElementById('goal');
+        const loseScreen = document.getElementById('loseScreen');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        if (!(goalEl instanceof HTMLElement) || !(loseScreen instanceof HTMLElement)) return;
+
+        const gl = canvas.getContext('webgl', {
+          antialias: false,
+          premultipliedAlpha: false,
+          powerPreference: 'low-power',
+        });
+        if (!gl) return;
+
+        const VERT = document.getElementById('vert').textContent;
+        const FRAG = document.getElementById('frag').textContent;
+        const palette = {
+          deepest: '#040814',
+          navy: '#0a1530',
+          midnight: '#142850',
+          petrol: '#2d5a8a',
+          sky: '#5a92c8',
+          ice: '#a8c8e8',
+        };
+        const orbCount = 5;
+        const bgPointCount = 4;
+        const orbs = [];
+        const bgPoints = [];
+        let completed = false;
+        let aspect = 1;
+        let goalRectUv = { left: 0.8, right: 0.95, top: 0.6, bottom: 0.4 };
+        const player = { x: 0.5, y: 0.5, r: 0.06, active: false };
+        let last = performance.now();
+        const FENCE_LEFT = 0.15;
+        const FENCE_RIGHT = 0.15;
+        const FENCE_TOP = 0.15;
+        const FENCE_BOTTOM = 0.15;
+
+        const rand = (min, max) => min + Math.random() * (max - min);
+        const clamp = (v, min, max) => Math.min(max, Math.max(min, v));        
+        const hex = (h) => {
+          const n = parseInt(h.replace('#', ''), 16);
+          return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+        };
+
+        const compile = (type, src) => {
+          const s = gl.createShader(type);
+          gl.shaderSource(s, src);
+          gl.compileShader(s);
+          if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) return null;
+          return s;
+        };
+        const prog = gl.createProgram();
+        const vs = compile(gl.VERTEX_SHADER, VERT);
+        const fs = compile(gl.FRAGMENT_SHADER, FRAG);
+        if (!prog || !vs || !fs) return;
+        gl.attachShader(prog, vs);
+        gl.attachShader(prog, fs);
+        gl.linkProgram(prog);
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return;
+        gl.useProgram(prog);
+
+        const buf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
+        const aPos = gl.getAttribLocation(prog, 'a_pos');
+        gl.enableVertexAttribArray(aPos);
+        gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+        const uniforms = {
+          aspect: gl.getUniformLocation(prog, 'u_aspect'),
+          time: gl.getUniformLocation(prog, 'u_time'),
+          points: gl.getUniformLocation(prog, 'u_points'),
+          colors: gl.getUniformLocation(prog, 'u_colors'),
+          radii: gl.getUniformLocation(prog, 'u_radii'),
+          power: gl.getUniformLocation(prog, 'u_power'),
+          baseColor: gl.getUniformLocation(prog, 'u_baseColor'),
+          baseStrength: gl.getUniformLocation(prog, 'u_baseStrength'),
+          waveDark: gl.getUniformLocation(prog, 'u_waveDark'),
+          waveLight: gl.getUniformLocation(prog, 'u_waveLight'),
+          waveStrength: gl.getUniformLocation(prog, 'u_waveStrength'),
+        };
+        gl.uniform1f(uniforms.power, 3.0);
+        gl.uniform3fv(uniforms.baseColor, hex(palette.navy));
+        gl.uniform1f(uniforms.baseStrength, 1.0);
+        gl.uniform3fv(uniforms.waveDark, hex(palette.deepest));
+        gl.uniform3fv(uniforms.waveLight, hex(palette.petrol));
+        gl.uniform1f(uniforms.waveStrength, 0.5);
+
+        const resize = () => {
+          const dpr = window.devicePixelRatio || 1;
+          const width = window.innerWidth;
+          const height = window.innerHeight;
+          canvas.width = Math.max(1, Math.floor(width * dpr));
+          canvas.height = Math.max(1, Math.floor(height * dpr));
+          aspect = width / Math.max(height, 1);
+          gl.viewport(0, 0, canvas.width, canvas.height);
+          gl.uniform1f(uniforms.aspect, aspect);
+
+          const goalRect = goalEl.getBoundingClientRect();
+          goalRectUv = {
+            left: goalRect.left / width,
+            right: goalRect.right / width,
+            top: 1 - goalRect.top / height,
+            bottom: 1 - goalRect.bottom / height,
+          };
+        };
+
+        const seedOrbs = () => {
+          orbs.length = 0;
+          bgPoints.length = 0;
+          const spawnMinX = FENCE_LEFT + 0.03;
+          const spawnMaxX = Math.min(1 - FENCE_RIGHT - 0.03, goalRectUv.left - 0.08);
+          const spawnMinY = FENCE_BOTTOM + 0.03;
+          const spawnMaxY = 1 - FENCE_TOP - 0.03;
+          const orbColor = hex(palette.sky);
+          for (let i = 0; i < orbCount; i++) {
+            orbs.push({
+              x: rand(spawnMinX, Math.max(spawnMinX + 0.01, spawnMaxX)),
+              y: rand(spawnMinY, Math.max(spawnMinY + 0.01, spawnMaxY)),
+              vx: rand(-0.05, 0.05),
+              vy: rand(-0.05, 0.05),
+              baseRadius: rand(0.85, 1.25),
+              radius: 1.0,
+              inGoal: false,
+              pulsePhase: Math.random() * Math.PI * 2,
+              pulseSpeed: rand(0.4, 1.2),
+              pulseAmount: rand(0.1, 0.22),
+              color: orbColor,
+            });
+          }
+
+          const bgColors = [palette.deepest, palette.deepest, palette.navy, palette.midnight];
+          for (let i = 0; i < bgPointCount; i++) {
+            bgPoints.push({
+              x: rand(0.08, 0.92),
+              y: rand(0.08, 0.92),
+              vx: rand(-0.03, 0.03),
+              vy: rand(-0.03, 0.03),
+              baseRadius: rand(2.8, 4.4),
+              radius: 3.2,
+              pulsePhase: Math.random() * Math.PI * 2,
+              pulseSpeed: rand(0.35, 0.9),
+              pulseAmount: rand(0.15, 0.32),
+              color: hex(bgColors[i % bgColors.length]),
+            });
+          }
+        };
+
+        const pointToPlayer = (event) => {
+          player.x = clamp(event.clientX / window.innerWidth, 0, 1);
+          player.y = clamp(1 - event.clientY / window.innerHeight, 0, 1);
+          player.active = true;
+        };
+
+        window.addEventListener('pointermove', pointToPlayer);
+        window.addEventListener('pointerdown', pointToPlayer);
+        window.addEventListener('pointerleave', () => {
+          player.active = false;
+        });
+        window.addEventListener('resize', () => {
+          resize();
+          if (!completed) {
+            for (const orb of orbs) {
+              orb.x = clamp(orb.x, FENCE_LEFT, 1 - FENCE_RIGHT);
+              orb.y = clamp(orb.y, FENCE_BOTTOM, 1 - FENCE_TOP);
+            }
+          }
+        });
+
+        const pushOrbByPlayer = (orb, dt) => {
+          if (!player.active || orb.inGoal) return;
+          const dx = orb.x - player.x;
+          const dy = orb.y - player.y;
+          const dist = Math.hypot(dx, dy) || 0.0001;
+          const influence = player.r + 0.18;
+          if (dist > influence) return;
+          const strength = (1 - dist / influence) * 1.8;
+          orb.vx += (dx / dist) * strength * dt;
+          orb.vy += (dy / dist) * strength * dt;
+        };
+
+        const separateOrbs = () => {
+          for (let i = 0; i < orbs.length; i++) {
+            for (let j = i + 1; j < orbs.length; j++) {
+              const a = orbs[i];
+              const b = orbs[j];
+              if (a.inGoal && b.inGoal) continue;
+              const dx = b.x - a.x;
+              const dy = b.y - a.y;
+              const dist = Math.hypot(dx, dy) || 0.0001;
+              const minDist = 0.06;
+              if (dist >= minDist) continue;
+              const overlap = (minDist - dist) * 0.5;
+              const nx = dx / dist;
+              const ny = dy / dist;
+              a.x -= nx * overlap;
+              a.y -= ny * overlap;
+              b.x += nx * overlap;
+              b.y += ny * overlap;
+            }
+          }
+        };
+
+        const update = (dt) => {
+          const EDGE_MIN_X = FENCE_LEFT;
+          const EDGE_MAX_X = 1 - FENCE_RIGHT;
+          const EDGE_MAX_X_GOAL_LANE = 1.08;
+          const EDGE_MIN_Y = FENCE_BOTTOM;
+          const EDGE_MAX_Y = 1 - FENCE_TOP;
+          const EDGE_BOUNCE = 0.82;
+          const MIN_ESCAPE = 0.06;
+          const EDGE_SOFT_ZONE = 0.018;
+          const GOAL_FORGIVENESS_X = 0.045;
+          const GOAL_FORGIVENESS_Y = 0.075;
+          for (const orb of orbs) {
+            pushOrbByPlayer(orb, dt);
+            if (orb.inGoal) {
+              orb.vx *= 0.88;
+              orb.vy *= 0.88;
+            } else {
+              const withinGoalLane =
+                orb.y < goalRectUv.top + GOAL_FORGIVENESS_Y &&
+                orb.y > goalRectUv.bottom - GOAL_FORGIVENESS_Y;
+              const insideGoalBox =
+                orb.x > goalRectUv.left - GOAL_FORGIVENESS_X &&
+                orb.x < goalRectUv.right + GOAL_FORGIVENESS_X &&
+                withinGoalLane;
+              const throughOpenGoalSide =
+                orb.x >= goalRectUv.right - GOAL_FORGIVENESS_X * 0.4 &&
+                withinGoalLane;
+              if (
+                insideGoalBox ||
+                throughOpenGoalSide
+              ) {
+                orb.inGoal = true;
+                orb.vx *= 0.35;
+                orb.vy *= 0.35;
+              }
+            }
+
+            orb.vx *= 0.985;
+            orb.vy *= 0.985;
+            orb.x += orb.vx * dt;
+            orb.y += orb.vy * dt;
+
+            const inGoalLaneForFence =
+              orb.y < goalRectUv.top + GOAL_FORGIVENESS_Y &&
+              orb.y > goalRectUv.bottom - GOAL_FORGIVENESS_Y;
+            const rightFenceLimit = inGoalLaneForFence ? EDGE_MAX_X_GOAL_LANE : EDGE_MAX_X;
+
+            if (orb.x < EDGE_MIN_X) {
+              orb.x = EDGE_MIN_X + EDGE_SOFT_ZONE;
+              orb.vx = Math.max(Math.abs(orb.vx) * EDGE_BOUNCE, MIN_ESCAPE + rand(0, 0.015));
+            } else if (orb.x > rightFenceLimit) {
+              orb.x = rightFenceLimit - EDGE_SOFT_ZONE;
+              orb.vx = -Math.max(Math.abs(orb.vx) * EDGE_BOUNCE, MIN_ESCAPE + rand(0, 0.015));
+            }
+
+            if (orb.y < EDGE_MIN_Y) {
+              orb.y = EDGE_MIN_Y + EDGE_SOFT_ZONE;
+              orb.vy = Math.max(Math.abs(orb.vy) * EDGE_BOUNCE, MIN_ESCAPE + rand(0, 0.015));
+            } else if (orb.y > EDGE_MAX_Y) {
+              orb.y = EDGE_MAX_Y - EDGE_SOFT_ZONE;
+              orb.vy = -Math.max(Math.abs(orb.vy) * EDGE_BOUNCE, MIN_ESCAPE + rand(0, 0.015));
+            }
+
+            // If an orb slows down while hugging a wall, nudge it back inward.
+            if (orb.x < EDGE_MIN_X + EDGE_SOFT_ZONE * 1.3 && orb.vx < MIN_ESCAPE * 0.75) {
+              orb.vx += MIN_ESCAPE * 0.45;
+            } else if (
+              !inGoalLaneForFence &&
+              orb.x > EDGE_MAX_X - EDGE_SOFT_ZONE * 1.3 &&
+              orb.vx > -MIN_ESCAPE * 0.75
+            ) {
+              orb.vx -= MIN_ESCAPE * 0.45;
+            }
+            if (orb.y < EDGE_MIN_Y + EDGE_SOFT_ZONE * 1.3 && orb.vy < MIN_ESCAPE * 0.75) {
+              orb.vy += MIN_ESCAPE * 0.45;
+            } else if (orb.y > EDGE_MAX_Y - EDGE_SOFT_ZONE * 1.3 && orb.vy > -MIN_ESCAPE * 0.75) {
+              orb.vy -= MIN_ESCAPE * 0.45;
+            }
+
+            orb.pulsePhase += orb.pulseSpeed * dt;
+            const pulse = Math.sin(orb.pulsePhase) * orb.pulseAmount;
+            orb.radius = orb.baseRadius * (1 + pulse);
+          }
+
+          for (const p of bgPoints) {
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            if (p.x < -0.08) { p.x = -0.08; p.vx = Math.abs(p.vx); }
+            if (p.x > 1.08) { p.x = 1.08; p.vx = -Math.abs(p.vx); }
+            if (p.y < -0.08) { p.y = -0.08; p.vy = Math.abs(p.vy); }
+            if (p.y > 1.08) { p.y = 1.08; p.vy = -Math.abs(p.vy); }
+            p.pulsePhase += p.pulseSpeed * dt;
+            const pulse = Math.sin(p.pulsePhase) * p.pulseAmount;
+            p.radius = p.baseRadius * (1 + pulse);
+          }
+
+          separateOrbs();
+          if (!completed && orbs.every((orb) => orb.inGoal)) {
+            completed = true;
+            loseScreen.classList.add('is-visible');
+          }
+        };
+
+        const positionsBuffer = new Float32Array(10 * 2);
+        const colorsBuffer = new Float32Array(10 * 3);
+        const radiiBuffer = new Float32Array(10);
+        const cursorColor = hex(palette.deepest);
+        const cursorSlot = 9;
+
+        const draw = () => {
+          let i = 0;
+          for (let i = 0; i < orbCount; i++) {
+            const p = orbs[i];
+            colorsBuffer[i * 3] = p.color[0];
+            colorsBuffer[i * 3 + 1] = p.color[1];
+            colorsBuffer[i * 3 + 2] = p.color[2];
+            if (p.inGoal) {
+              positionsBuffer[i * 2] = -10;
+              positionsBuffer[i * 2 + 1] = -10;
+              radiiBuffer[i] = 0.0;
+            } else {
+              positionsBuffer[i * 2] = p.x;
+              positionsBuffer[i * 2 + 1] = p.y;
+              radiiBuffer[i] = p.radius;
+            }
+          }
+
+          for (let j = 0; j < bgPointCount; j++) {
+            i = orbCount + j;
+            const p = bgPoints[j];
+            positionsBuffer[i * 2] = p.x;
+            positionsBuffer[i * 2 + 1] = p.y;
+            colorsBuffer[i * 3] = p.color[0];
+            colorsBuffer[i * 3 + 1] = p.color[1];
+            colorsBuffer[i * 3 + 2] = p.color[2];
+            radiiBuffer[i] = p.radius;
+          }
+
+          if (player.active) {
+            positionsBuffer[cursorSlot * 2] = player.x;
+            positionsBuffer[cursorSlot * 2 + 1] = player.y;
+            colorsBuffer[cursorSlot * 3] = cursorColor[0];
+            colorsBuffer[cursorSlot * 3 + 1] = cursorColor[1];
+            colorsBuffer[cursorSlot * 3 + 2] = cursorColor[2];
+            radiiBuffer[cursorSlot] = 0.9;
+          } else {
+            positionsBuffer[cursorSlot * 2] = -10;
+            positionsBuffer[cursorSlot * 2 + 1] = -10;
+            radiiBuffer[cursorSlot] = 0;
+          }
+
+          gl.uniform1f(uniforms.time, performance.now() / 1000);
+          gl.uniform2fv(uniforms.points, positionsBuffer);
+          gl.uniform3fv(uniforms.colors, colorsBuffer);
+          gl.uniform1fv(uniforms.radii, radiiBuffer);
+          gl.drawArrays(gl.TRIANGLES, 0, 6);
+        };
+
+        const frame = (now) => {
+          const dt = Math.min(0.033, (now - last) / 1000);
+          last = now;
+          if (!completed) update(dt);
+          draw();
+          requestAnimationFrame(frame);
+        };
+
+        resize();
+        seedOrbs();
+        requestAnimationFrame(frame);
+      })();
+    </script>
+  </body>
+</html>

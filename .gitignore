@@ -34,3 +34,6 @@ pnpm-debug.log*
 
 # reports
 lighthouse*.json
+
+# local visual experiments (keep out of git)
+mesh-gradient.local.html

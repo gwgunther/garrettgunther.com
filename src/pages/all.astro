@@ -54,6 +54,7 @@ const pageDesc =
   title="All work — Garrett Gunther"
   description={pageDesc}
   canonicalPath="/all/"
+  darkModeMeshBackground={true}
 >
   <SiteHeader currentView="all" />
   <main id="main" class="all-layout">
@@ -259,6 +260,7 @@ const pageDesc =
       let selectedCard = null;
       let pointerDownX = 0;
       let pointerMoved = false;
+      let pinnedTimelinePercent = null;
 
       const markers = Array.from(
         document.querySelectorAll('.all-years__post-marker[data-card-id]')
@@ -334,17 +336,27 @@ const pageDesc =
 
       function dragToPercent(percent) {
         if (!cursor || !cards.length) return;
+        const clamped = clampPercent(percent);
+        cursor.style.left = `${clamped}%`;
+        cursor.setAttribute('aria-valuenow', String(Math.round(clamped)));
 
-        const active = closestCardToPercent(percent);
-        setSelectedCard(active);
-        scrollToCard(active, 'auto', { alignTop: true });
+        if (!scrollHost) return;
+        const maxScroll = Math.max(scrollHost.scrollHeight - scrollHost.clientHeight, 0);
+        const targetTop = ((100 - clamped) / 100) * maxScroll;
+        scrollHost.scrollTo({ top: targetTop, behavior: 'auto' });
       }
 
       function setActivePost() {
         if (!cards.length || !cursor || isDraggingTimeline) return;
         if (!scrollHost) return;
+        if (pinnedTimelinePercent !== null) {
+          cursor.style.left = `${pinnedTimelinePercent}%`;
+          cursor.setAttribute('aria-valuenow', String(Math.round(pinnedTimelinePercent)));
+          return;
+        }
         if (selectedCard) {
-          setSelectedCard(null);
+          setActiveCard(selectedCard);
+          return;
         }
         const hostRect = scrollHost.getBoundingClientRect();
         const viewportBottom = hostRect.bottom;
@@ -375,7 +387,13 @@ const pageDesc =
       if (rail && cursor) {
         rail.addEventListener('pointerdown', (event) => {
           if (!cards.length) return;
+          const target = event.target;
+          if (target instanceof Element && target.closest('.all-years__post-marker')) {
+            // Hash marker clicks are handled by their own click listener.
+            return;
+          }
           event.preventDefault();
+          pinnedTimelinePercent = null;
           isDraggingTimeline = true;
           pointerDownX = event.clientX;
           pointerMoved = false;
@@ -401,9 +419,17 @@ const pageDesc =
             ? pendingDragPercent
             : percentFromPointer(event.clientX);
           if (targetPercent !== null) {
-            const active = closestCardToPercent(targetPercent);
-            setSelectedCard(active);
-            scrollToCard(active, pointerMoved ? 'auto' : 'smooth', { alignTop: true });
+            if (pointerMoved) {
+              // Keep exact dropped position after a drag; do not snap to nearest card.
+              setSelectedCard(null);
+              pinnedTimelinePercent = clampPercent(targetPercent);
+              dragToPercent(targetPercent);
+            } else {
+              pinnedTimelinePercent = null;
+              const active = closestCardToPercent(targetPercent);
+              setSelectedCard(active);
+              scrollToCard(active, 'smooth', { alignTop: true });
+            }
           }
           pendingDragPercent = null;
           pointerMoved = false;
@@ -428,6 +454,7 @@ const pageDesc =
             : Math.max(0, fallbackIndex - 1);
           const active = timelineCards[nextIndex];
 
+          pinnedTimelinePercent = null;
           setActiveCard(active);
           setSelectedCard(active);
           scrollToCard(active, 'smooth', { alignTop: true });
@@ -436,6 +463,7 @@ const pageDesc =
         markers.forEach((marker) => {
           marker.addEventListener('click', (event) => {
             event.preventDefault();
+            pinnedTimelinePercent = null;
             const active = cards.find((card) => card.marker === marker);
             if (!active) return;
             setSelectedCard(active);
@@ -446,6 +474,15 @@ const pageDesc =
 
       if (scrollHost) {
         scrollHost.addEventListener('scroll', setActivePost, { passive: true });
+        scrollHost.addEventListener('wheel', () => {
+          pinnedTimelinePercent = null;
+        }, { passive: true });
+        scrollHost.addEventListener('touchstart', () => {
+          pinnedTimelinePercent = null;
+        }, { passive: true });
+        scrollHost.addEventListener('pointerdown', () => {
+          pinnedTimelinePercent = null;
+        }, { passive: true });
       }
       window.addEventListener('resize', setActivePost);
       setActivePost();
@@ -482,6 +519,7 @@ const pageDesc =
           }
         }
       }
+
     }
   </script>
 </BaseLayout>

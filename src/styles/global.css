@@ -99,7 +99,7 @@ main {
 }
 
 .gg-dark-mode .featured-label {
-  border-bottom-color: rgba(255, 255, 255, 0.18);
+  border-bottom-color: rgba(255, 255, 255, 0.38);
 }
 
 .gg-dark-mode .intro-line__link,
@@ -236,6 +236,10 @@ a:hover {
   text-underline-offset: 0.14em;
 }
 
+.gg-dark-mode .site-title__easter--game {
+  text-decoration: none;
+}
+
 .site-nav-main {
   display: flex;
   flex-wrap: wrap;
@@ -293,7 +297,7 @@ a:hover {
   position: relative;
   height: 1.9rem;
   width: 1.9rem;
-  border: 0;
+  border: 1px solid rgba(27, 50, 79, 0.32);
   border-radius: 0;
   background: transparent;
   color: var(--accent);
@@ -304,7 +308,7 @@ a:hover {
   justify-content: center;
   line-height: 1;
   overflow: hidden;
-  transition: background-color 0.2s var(--ease-out), color 0.2s var(--ease-out), transform 0.16s var(--ease-out);
+  transition: border-color 0.2s var(--ease-out), background-color 0.2s var(--ease-out), color 0.2s var(--ease-out);
 }
 
 .site-header .dark-mode-toggle {
@@ -325,76 +329,28 @@ a:hover {
 }
 
 .dark-mode-toggle__fluid {
-  position: relative;
-  z-index: 1;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
   width: 100%;
   height: 100%;
   border: 0;
   pointer-events: none;
-  transform: scale(1);
-  transform-origin: center center;
-  filter: saturate(2.4) contrast(1.95) brightness(1.12);
-  opacity: 0.98;
+  opacity: 1;
 }
 
 .dark-mode-toggle__fluid-shell::before,
 .dark-mode-toggle__fluid-shell::after {
-  content: "";
-  position: absolute;
-  display: none;
-  inset: -30%;
-  border-radius: 48%;
-  pointer-events: none;
-  z-index: 2;
-  will-change: transform;
-}
-
-.dark-mode-toggle__fluid-shell::before {
-  background:
-    radial-gradient(22% 34% at 24% 62%, rgba(198, 224, 248, 0.92), transparent 66%),
-    radial-gradient(24% 30% at 70% 34%, rgba(78, 137, 214, 0.86), transparent 68%),
-    radial-gradient(17% 22% at 50% 52%, rgba(219, 236, 252, 0.72), transparent 62%);
-  mix-blend-mode: screen;
-  animation: dark-toggle-fluid-drift-a 8.8s ease-in-out infinite alternate;
-}
-
-.dark-mode-toggle__fluid-shell::after {
-  background:
-    radial-gradient(18% 26% at 50% 50%, rgba(43, 124, 163, 0.74), transparent 64%),
-    radial-gradient(13% 18% at 38% 44%, rgba(148, 193, 236, 0.44), transparent 58%);
-  mix-blend-mode: lighten;
-  animation: dark-toggle-fluid-drift-b 10.2s ease-in-out infinite;
-  opacity: 0.92;
-}
-
-@keyframes dark-toggle-fluid-drift-a {
-  0% {
-    transform: translate3d(-12%, 6%, 0) rotate(0deg) scale(1.06);
-  }
-  100% {
-    transform: translate3d(10%, -7%, 0) rotate(14deg) scale(1.14);
-  }
-}
-
-@keyframes dark-toggle-fluid-drift-b {
-  0% {
-    transform: translate3d(9%, -10%, 0) rotate(0deg) scale(1.1);
-  }
-  50% {
-    transform: translate3d(-9%, 8%, 0) rotate(-11deg) scale(1.18);
-  }
-  100% {
-    transform: translate3d(7%, 12%, 0) rotate(8deg) scale(1.08);
-  }
+  content: none;
 }
 
 .dark-mode-toggle__icon {
   position: relative;
-  z-index: 3;
+  z-index: 2;
   font-size: 0.95rem;
   line-height: 1;
-  color: #f4f1ea;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: none;
 }
 
 .dark-mode-toggle__icon--sun {
@@ -407,22 +363,23 @@ a:hover {
 }
 
 .dark-mode-toggle:hover {
-  transform: none;
+  border-color: rgba(255, 255, 255, 0.7);
 }
 
 .dark-mode-toggle.is-active {
-  background: #fff;
-  color: #1b324f;
+  border-color: rgba(255, 255, 255, 0.92);
 }
 
 .gg-dark-mode .dark-mode-toggle {
   color: #fff;
-  background: rgba(7, 16, 38, 0.82);
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.62);
 }
 
 .gg-dark-mode .dark-mode-toggle.is-active {
   background: #fff;
   color: #1b324f;
+  border-color: #fff;
 }
 
 .gg-dark-mode .dark-mode-toggle:hover {
@@ -861,7 +818,7 @@ a:hover {
 
 .gg-dark-mode .all-page-title {
   color: #fff;
-  border-bottom-color: rgba(255, 255, 255, 0.18);
+  border-bottom-color: rgba(255, 255, 255, 0.38);
 }
 
 .all-page-title--timeline {
@@ -1400,7 +1357,7 @@ a:hover {
   border: 1px solid var(--border);
   color: inherit;
   animation: rise 0.65s var(--ease-out) both;
-  transition: box-shadow 0.2s var(--ease-out);
+  transition: box-shadow 0.2s var(--ease-out), background-color 0.2s var(--ease-out);
   overflow: hidden;
 }
 
@@ -1408,11 +1365,72 @@ a:hover {
 .gg-dark-mode .project-card__media,
 .gg-dark-mode .project-card--grid,
 .gg-dark-mode .project-hero__inner {
-  background: #fff;
+  background: transparent;
+}
+
+.gg-dark-mode .project-card--grid,
+.gg-dark-mode .project-card__thumb,
+.gg-dark-mode .project-card__media,
+.gg-dark-mode .project-hero__inner {
+  border-color: rgba(255, 255, 255, 0.38);
+}
+
+.gg-dark-mode .project-card--grid {
+  box-shadow: none;
+}
+
+.gg-dark-mode .project-card__grid-title,
+.gg-dark-mode .project-card__meta,
+.gg-dark-mode .project-card__type-icons--grid,
+.gg-dark-mode .project-card__thumb-fallback,
+.gg-dark-mode .project-year-marker {
+  color: rgba(255, 255, 255, 0.96);
+}
+
+.gg-dark-mode .project-card__meta {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.gg-dark-mode .project-card--grid:hover .project-card__grid-title,
+.gg-dark-mode .project-card--grid:focus-within .project-card__grid-title,
+.gg-dark-mode .project-card__grid-link:hover .project-card__grid-title,
+.gg-dark-mode .project-card--grid:hover .project-card__type-icons--grid,
+.gg-dark-mode .project-card--grid:focus-within .project-card__type-icons--grid {
+  color: #fff;
+}
+
+.gg-dark-mode .project-card__thumb--film .project-card__thumb-year,
+.gg-dark-mode .project-card__thumb--embed .project-card__thumb-year {
+  color: rgba(255, 255, 255, 0.94);
+  background: rgba(7, 16, 38, 0.55);
+  border-color: rgba(255, 255, 255, 0.28);
 }
 
 .project-card--grid:hover {
+  background: rgba(15, 16, 18, 0.06);
   box-shadow: 0 8px 28px rgba(28, 27, 25, 0.06);
+}
+
+.project-list .project-card--home:hover,
+.project-list .project-card--home:focus-within {
+  background: var(--bg);
+}
+
+.project-card--grid:hover .project-card__thumb,
+.project-card--grid:focus-within .project-card__thumb,
+.project-card--grid:hover .project-card__thumb--embed,
+.project-card--grid:focus-within .project-card__thumb--embed {
+  background: transparent;
+}
+
+.gg-dark-mode .project-card--grid:hover,
+.gg-dark-mode .project-card--grid:focus-within {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.gg-dark-mode .project-list .project-card--home:hover,
+.gg-dark-mode .project-list .project-card--home:focus-within {
+  background: transparent;
 }
 
 /* Hover visuals removed for a clean static card. */
@@ -1434,7 +1452,7 @@ a:hover {
   aspect-ratio: 4 / 3;
   overflow: hidden;
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 0;
   isolation: isolate;
 }
 
@@ -1605,6 +1623,31 @@ a:hover {
     text-shadow 0.32s ease;
 }
 
+.gg-dark-mode .project-card__grid-title,
+.gg-dark-mode .project-card__meta,
+.gg-dark-mode .project-card__meta-link,
+.gg-dark-mode .project-card__type-icons--grid {
+  color: #fff;
+}
+
+.gg-dark-mode .project-card__meta {
+  opacity: 0.92;
+}
+
+.gg-dark-mode .project-card__grid-link:hover .project-card__grid-title,
+.gg-dark-mode .project-card--grid:hover .project-card__grid-title,
+.gg-dark-mode .project-card--grid:focus-within .project-card__grid-title,
+.gg-dark-mode .project-card--grid:hover .project-card__meta,
+.gg-dark-mode .project-card--grid:focus-within .project-card__meta,
+.gg-dark-mode .project-card--grid:hover .project-card__type-icons--grid,
+.gg-dark-mode .project-card--grid:focus-within .project-card__type-icons--grid,
+.gg-dark-mode .project-card--grid:hover .project-card__grid-link:hover .project-card__grid-title,
+.gg-dark-mode .project-card--grid:focus-within .project-card__grid-link:hover .project-card__grid-title,
+.gg-dark-mode .project-card--grid:hover .project-card__grid-link:hover .project-card__type-icons--grid,
+.gg-dark-mode .project-card--grid:focus-within .project-card__grid-link:hover .project-card__type-icons--grid {
+  color: #fff;
+}
+
 /* --- Project detail --- */
 .project-hero {
   margin-bottom: var(--space-lg);
@@ -1617,6 +1660,10 @@ a:hover {
   border: 1px solid var(--border);
   background: var(--bg-elevated);
   overflow: hidden;
+}
+
+.project-hero__inner.embed {
+  border: 0;
 }
 
 .project-hero__still {

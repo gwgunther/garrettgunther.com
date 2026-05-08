@@ -2,6 +2,7 @@
 import '../styles/global.css';
 import GoogleAnalytics from '../components/GoogleAnalytics.astro';
 import LightboxModal from '../components/LightboxModal.astro';
+import MeshDarkBackground from '../components/MeshDarkBackground.astro';
 
 type Props = {
   title: string;
@@ -11,6 +12,7 @@ type Props = {
   ogType?: string;
   jsonLd?: Record<string, unknown>;
   darkModeFluidSrc?: string;
+  darkModeMeshBackground?: boolean;
 };
 
 const {
@@ -21,6 +23,7 @@ const {
   ogType = 'website',
   jsonLd,
   darkModeFluidSrc = '/flow-gradient-full.html',
+  darkModeMeshBackground = true,
 } = Astro.props;
 
 const site = Astro.site?.href ?? 'https://garrettgunther.com';
@@ -75,14 +78,20 @@ const fullTitle = title === 'Garrett Gunther' ? title : `${title} · Garrett Gun
     <title>{fullTitle}</title>
   </head>
   <body>
-    <iframe
-      class="dark-mode-fluid-bg"
-      src={darkModeFluidSrc}
-      title="Dark mode fluid background"
-      loading="eager"
-      tabindex="-1"
-      aria-hidden="true"
-    ></iframe>
+    {
+      darkModeMeshBackground ? (
+        <MeshDarkBackground />
+      ) : (
+        <iframe
+          class="dark-mode-fluid-bg"
+          src={darkModeFluidSrc}
+          title="Dark mode fluid background"
+          loading="eager"
+          tabindex="-1"
+          aria-hidden="true"
+        ></iframe>
+      )
+    }
     <a class="sr-only" href="#main">Skip to content</a>
     <slot />
     <LightboxModal />

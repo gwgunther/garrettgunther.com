@@ -1,0 +1,36 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+---
+
+<BaseLayout
+  title="Mesh"
+  description="Interactive mesh gradient study."
+  canonicalPath="/mesh/"
+>
+  <SiteHeader currentView="mesh" />
+  <main id="main" class="mesh-page">
+    <iframe
+      class="mesh-frame"
+      src="/mesh-gradient.html"
+      title="Mesh gradient"
+      loading="eager"
+      referrerpolicy="no-referrer"
+    ></iframe>
+  </main>
+</BaseLayout>
+
+<style is:global>
+  .mesh-page {
+    margin: 0;
+    padding: 0;
+  }
+
+  .mesh-frame {
+    display: block;
+    width: 100%;
+    height: calc(100dvh - var(--header-height));
+    border: 0;
+    background: transparent;
+  }
+</style>

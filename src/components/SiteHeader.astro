@@ -1,7 +1,7 @@
 ---
 type Props = {
   /** Highlights the matching nav item; omit on home */
-  currentView?: 'all' | 'fluid' | 'cities';
+  currentView?: 'all' | 'fluid' | 'cities' | 'mesh';
 };
 
 const { currentView } = Astro.props;
@@ -14,7 +14,11 @@ const isFluidBackdrop = currentView === 'fluid';
         href="/cities/"
         class="site-title__easter"
         aria-label="Cities"
-      >G</a><a href="/">arrett <em>Gunther</em></a></p>
+      >G</a><a href="/">arrett </a><em><a
+          href="/the-game/"
+          class="site-title__easter site-title__easter--game"
+          aria-label="Secret game"
+        >G</a><a href="/">unther</a></em></p>
     <div class="site-header__end">
       <nav aria-label="Site">
         <ul class="site-nav-main">
@@ -24,15 +28,26 @@ const isFluidBackdrop = currentView === 'fluid';
                 <a href="/">Home</a>
               </li>
             ) : !currentView ? (
-              <li>
-                <a href="/all/">All projects</a>
-              </li>
+              <>
+                <li>
+                  <a href="/all/">All projects</a>
+                </li>
+              </>
             ) : currentView === 'cities' ? (
               <>
                 <li>
                   <a href="/">Home</a>
                 </li>
                 <li aria-hidden="true">|</li>
+                <li>
+                  <a href="/all/">All projects</a>
+                </li>
+              </>
+            ) : currentView === 'mesh' ? (
+              <>
+                <li>
+                  <a href="/">Home</a>
+                </li>
                 <li>
                   <a href="/all/">All projects</a>
                 </li>
@@ -59,14 +74,12 @@ const isFluidBackdrop = currentView === 'fluid';
             >
               <span class="sr-only">Toggle dark mode</span>
               <span class="dark-mode-toggle__fluid-shell" aria-hidden="true">
-                <iframe
+                <canvas
                   class="dark-mode-toggle__fluid"
-                  src="/flow-gradient-full.html"
+                  data-dark-toggle-mesh
                   title=""
-                  loading="eager"
-                  tabindex="-1"
                   aria-hidden="true"
-                ></iframe>
+                ></canvas>
               </span>
               <span class="dark-mode-toggle__icon dark-mode-toggle__icon--sun" aria-hidden="true">☼</span>
             </button>
@@ -76,3 +89,205 @@ const isFluidBackdrop = currentView === 'fluid';
     </div>
   </div>
 </header>
+
+<script is:inline>
+  (() => {
+    const canvas = document.querySelector('[data-dark-toggle-mesh]');
+    if (!(canvas instanceof HTMLCanvasElement)) return;
+    const gl = canvas.getContext('webgl', {
+      antialias: false,
+      premultipliedAlpha: false,
+      powerPreference: 'low-power',
+    });
+    if (!gl) return;
+
+    const VERT = `
+      attribute vec2 a_pos;
+      varying vec2 v_uv;
+      void main() {
+        v_uv = a_pos * 0.5 + 0.5;
+        gl_Position = vec4(a_pos, 0.0, 1.0);
+      }
+    `;
+
+    const FRAG = `
+      precision highp float;
+      varying vec2 v_uv;
+      uniform float u_time;
+      uniform float u_aspect;
+      uniform vec2 u_cursor;
+      uniform float u_cursor_active;
+      #define N_POINTS 12
+      uniform vec2 u_points[N_POINTS];
+      uniform vec3 u_colors[N_POINTS];
+      uniform float u_radii[N_POINTS];
+
+      float hash21(vec2 p){
+        p = fract(p * vec2(123.34, 456.21));
+        p += dot(p, p + 45.32);
+        return fract(p.x * p.y);
+      }
+
+      void main() {
+        vec2 uv = v_uv;
+        uv.x *= u_aspect;
+
+        vec3 blobSum = vec3(0.0);
+        float wSum = 0.0;
+        for (int i = 0; i < N_POINTS; i++) {
+          vec2 p = u_points[i];
+          p.x *= u_aspect;
+          float d = max(distance(uv, p), 0.001);
+          float w = u_radii[i] / pow(d, 2.25);
+          blobSum += u_colors[i] * w;
+          wSum += w;
+        }
+        vec3 col = blobSum / max(wSum, 0.0001);
+
+        if (u_cursor_active > 0.5) {
+          vec2 c = u_cursor;
+          c.x *= u_aspect;
+          float cd = distance(uv, c);
+          float influence = smoothstep(0.56, 0.0, cd);
+          col = mix(col, vec3(0.04, 0.09, 0.2), influence * 0.42);
+        }
+
+        float grain = (hash21(gl_FragCoord.xy + floor(u_time * 24.0)) - 0.5) * 0.03;
+        col += grain;
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `;
+
+    const hex = (h) => {
+      const n = parseInt(h.replace('#', ''), 16);
+      return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+    };
+    const randRange = (lo, hi) => lo + Math.random() * (hi - lo);
+    const palette = ['#040814', '#0a1530', '#142850', '#2d5a8a', '#5a92c8'];
+
+    const points = Array.from({ length: 12 }, (_, i) => ({
+      x: Math.random(),
+      y: Math.random(),
+      vx: randRange(-0.09, 0.09),
+      vy: randRange(-0.09, 0.09),
+      radius: randRange(4.6, 8.2),
+      color: hex(palette[Math.min(palette.length - 1, Math.floor((i / 12) * palette.length))]),
+      phase: Math.random() * Math.PI * 2,
+      speed: randRange(1.8, 4.0),
+      amount: randRange(0.45, 0.95),
+    }));
+
+    const compile = (type, src) => {
+      const s = gl.createShader(type);
+      if (!s) return null;
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) return null;
+      return s;
+    };
+
+    const prog = gl.createProgram();
+    const vs = compile(gl.VERTEX_SHADER, VERT);
+    const fs = compile(gl.FRAGMENT_SHADER, FRAG);
+    if (!prog || !vs || !fs) return;
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return;
+    gl.useProgram(prog);
+
+    const buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
+    const aPos = gl.getAttribLocation(prog, 'a_pos');
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+    const uTime = gl.getUniformLocation(prog, 'u_time');
+    const uAspect = gl.getUniformLocation(prog, 'u_aspect');
+    const uCursor = gl.getUniformLocation(prog, 'u_cursor');
+    const uCursorActive = gl.getUniformLocation(prog, 'u_cursor_active');
+    const uPoints = gl.getUniformLocation(prog, 'u_points');
+    const uColors = gl.getUniformLocation(prog, 'u_colors');
+    const uRadii = gl.getUniformLocation(prog, 'u_radii');
+
+    const positions = new Float32Array(24);
+    const colors = new Float32Array(36);
+    const radii = new Float32Array(12);
+    let cursor = { x: 0.5, y: 0.5, active: 0 };
+    let aspect = 1;
+    let last = performance.now();
+    const start = performance.now();
+
+    const resize = () => {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const w = Math.max(1, Math.floor(rect.width * dpr));
+      const h = Math.max(1, Math.floor(rect.height * dpr));
+      canvas.width = w;
+      canvas.height = h;
+      aspect = rect.width / Math.max(rect.height, 1);
+      gl.viewport(0, 0, w, h);
+    };
+
+    const shell = canvas.closest('.dark-mode-toggle__fluid-shell');
+    if (shell instanceof HTMLElement) {
+      const setCursor = (clientX, clientY) => {
+        const r = shell.getBoundingClientRect();
+        cursor.x = (clientX - r.left) / Math.max(r.width, 1);
+        cursor.y = 1 - (clientY - r.top) / Math.max(r.height, 1);
+      };
+      shell.addEventListener('pointermove', (e) => {
+        setCursor(e.clientX, e.clientY);
+        cursor.active = 1;
+      });
+      shell.addEventListener('pointerenter', (e) => {
+        setCursor(e.clientX, e.clientY);
+        cursor.active = 1;
+      });
+      shell.addEventListener('pointerleave', () => {
+        cursor.active = 0;
+      });
+    }
+
+    const tick = () => {
+      const now = performance.now();
+      const dt = Math.min((now - last) / 1000, 0.05);
+      last = now;
+
+      for (let i = 0; i < points.length; i++) {
+        const p = points[i];
+        p.phase += p.speed * dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        if (p.x < -0.1 || p.x > 1.1) p.vx *= -1;
+        if (p.y < -0.1 || p.y > 1.1) p.vy *= -1;
+        p.vx += (Math.random() - 0.5) * 0.08 * dt;
+        p.vy += (Math.random() - 0.5) * 0.08 * dt;
+        p.vx = Math.max(-0.28, Math.min(0.28, p.vx));
+        p.vy = Math.max(-0.28, Math.min(0.28, p.vy));
+        const pulse = 1 + Math.sin(p.phase) * p.amount;
+        positions[i * 2] = p.x;
+        positions[i * 2 + 1] = p.y;
+        colors[i * 3] = p.color[0];
+        colors[i * 3 + 1] = p.color[1];
+        colors[i * 3 + 2] = p.color[2];
+        radii[i] = p.radius * pulse;
+      }
+
+      gl.uniform1f(uTime, (now - start) / 1000);
+      gl.uniform1f(uAspect, aspect);
+      gl.uniform2f(uCursor, cursor.x, cursor.y);
+      gl.uniform1f(uCursorActive, cursor.active);
+      gl.uniform2fv(uPoints, positions);
+      gl.uniform3fv(uColors, colors);
+      gl.uniform1fv(uRadii, radii);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+      requestAnimationFrame(tick);
+    };
+
+    resize();
+    window.addEventListener('resize', resize);
+    requestAnimationFrame(tick);
+  })();
+</script>

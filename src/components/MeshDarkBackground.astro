@@ -1,0 +1,437 @@
+<div class="mesh-dark-bg" aria-hidden="true">
+  <canvas class="mesh-dark-bg__canvas" data-mesh-dark-canvas></canvas>
+</div>
+
+<style is:global>
+  .mesh-dark-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 420ms cubic-bezier(0.22, 1, 0.36, 1);
+    background: #050a18;
+  }
+
+  .mesh-dark-bg__canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .gg-dark-mode .mesh-dark-bg {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mesh-dark-bg__canvas {
+      display: none;
+    }
+    .mesh-dark-bg {
+      background: linear-gradient(135deg, #050a18, #1a2e60);
+    }
+  }
+</style>
+
+<script is:inline>
+  (() => {
+    const canvas = document.querySelector('[data-mesh-dark-canvas]');
+    if (!(canvas instanceof HTMLCanvasElement)) return;
+    const gl = canvas.getContext('webgl', {
+      antialias: false,
+      premultipliedAlpha: false,
+      powerPreference: 'low-power',
+    });
+    if (!gl) return;
+
+    const VERT = `
+      attribute vec2 a_pos;
+      varying vec2 v_uv;
+      void main() {
+        v_uv = a_pos * 0.5 + 0.5;
+        gl_Position = vec4(a_pos, 0.0, 1.0);
+      }
+    `;
+
+    const FRAG = `
+      precision highp float;
+      varying vec2 v_uv;
+      uniform vec2 u_res;
+      uniform float u_aspect;
+      uniform float u_time;
+      #define N_POINTS 18
+      uniform vec2 u_points[N_POINTS];
+      uniform vec3 u_colors[N_POINTS];
+      uniform float u_radii[N_POINTS];
+      uniform float u_power;
+      uniform vec3  u_baseColor;
+      uniform float u_baseStrength;
+      uniform vec3  u_waveDark;
+      uniform vec3  u_waveLight;
+      uniform float u_waveStrength;
+
+      float hash21(vec2 p){
+        p = fract(p * vec2(123.34, 456.21));
+        p += dot(p, p + 45.32);
+        return fract(p.x * p.y);
+      }
+
+      vec3 mod289_3(vec3 x){return x - floor(x*(1.0/289.0))*289.0;}
+      vec2 mod289_2(vec2 x){return x - floor(x*(1.0/289.0))*289.0;}
+      vec3 permute3(vec3 x){return mod289_3(((x*34.0)+1.0)*x);}
+
+      float snoise(vec2 v){
+        const vec4 C = vec4(0.211324865405187, 0.366025403784439,
+                          -0.577350269189626, 0.024390243902439);
+        vec2 i  = floor(v + dot(v, C.yy));
+        vec2 x0 = v -   i + dot(i, C.xx);
+        vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+        vec4 x12 = x0.xyxy + C.xxzz; x12.xy -= i1;
+        i = mod289_2(i);
+        vec3 p = permute3( permute3( i.y + vec3(0.0, i1.y, 1.0))
+                        + i.x + vec3(0.0, i1.x, 1.0));
+        vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+        m = m*m; m = m*m;
+        vec3 x = 2.0 * fract(p * C.www) - 1.0;
+        vec3 h = abs(x) - 0.5;
+        vec3 ox = floor(x + 0.5);
+        vec3 a0 = x - ox;
+        m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
+        vec3 g;
+        g.x  = a0.x  * x0.x  + h.x  * x0.y;
+        g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+        return 130.0 * dot(m, g);
+      }
+
+      float wavePattern(vec2 uv, float time) {
+        vec2 axis = normalize(vec2(0.18, 1.0));
+        float warp1 = snoise(vec2(uv.x * 1.2, uv.y * 0.8 + time * 0.05)) * 0.35;
+        float warp2 = snoise(vec2(uv.x * 0.6 + time * 0.03, uv.y * 1.4)) * 0.20;
+        vec2 warped = uv + vec2(warp1, warp2);
+        float w = dot(warped, axis) * 4.5 + time * 0.30;
+        float ribbon = sin(w) * 0.5 + 0.5;
+        float breath = 0.7 + 0.3 * sin(time * 0.52);
+        ribbon = pow(ribbon, mix(1.5, 0.7, breath));
+        return ribbon;
+      }
+
+      void main() {
+        vec2 uv = v_uv;
+        uv.x *= u_aspect;
+
+        vec3 blobSum = vec3(0.0);
+        float weightSum = 0.0;
+
+        for (int i = 0; i < N_POINTS; i++) {
+          vec2 p = u_points[i];
+          p.x *= u_aspect;
+          float d = distance(uv, p);
+          d = max(d, 0.001);
+          float w = u_radii[i] / pow(d, u_power);
+          blobSum += u_colors[i] * w;
+          weightSum += w;
+        }
+        vec3 blobColor = blobSum / weightSum;
+
+        float wave = wavePattern(v_uv, u_time);
+        wave = smoothstep(0.35, 0.85, wave);
+
+        vec3 col = blobColor;
+        float blobBrightness = (col.r + col.g + col.b) / 3.0;
+        float waveOpacity = u_waveStrength * (1.0 - blobBrightness * 1.2);
+        waveOpacity = max(waveOpacity, 0.0);
+        col += (u_waveLight - u_waveDark) * wave * waveOpacity;
+        col = mix(col, u_baseColor, u_baseStrength * 0.15);
+
+        float grainSeed = floor(u_time * 24.0) / 24.0;
+        float grain = (hash21(gl_FragCoord.xy + grainSeed) - 0.5) * 0.035;
+        float grainDensity = 0.7 + 0.3 * snoise(v_uv * 3.0 + u_time * 0.05);
+        col += grain * grainDensity;
+
+        float vig = smoothstep(1.4, 0.4, length(v_uv - 0.5));
+        col *= mix(0.92, 1.02, vig);
+
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `;
+
+    const PALETTE = {
+      deepest: '#040814',
+      navy: '#0a1530',
+      midnight: '#142850',
+      petrol: '#2d5a8a',
+      sky: '#5a92c8',
+      ice: '#a8c8e8',
+    };
+
+    const hex = (h) => {
+      const n = parseInt(h.replace('#', ''), 16);
+      return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+    };
+    const randRange = (lo, hi) => lo + Math.random() * (hi - lo);
+
+    const makePoints = () => {
+      const pts = [];
+      const pt = (colorHex, baseRadius, vRange) => ({
+        x: Math.random(),
+        y: Math.random(),
+        vx: randRange(-vRange, vRange),
+        vy: randRange(-vRange, vRange),
+        color: hex(colorHex),
+        baseRadius,
+        radius: baseRadius,
+        pulsePhase: Math.random() * Math.PI * 2,
+        pulseSpeed: randRange(1.6, 3.8),
+        pulseAmount: randRange(0.42, 0.9),
+      });
+
+      // Bigger radii to create chunkier, more dominant blobs.
+      for (let i = 0; i < 2; i++) pts.push(pt(PALETTE.deepest, randRange(8.5, 12.5), 0.076));
+      for (let i = 0; i < 3; i++) pts.push(pt(Math.random() < 0.5 ? PALETTE.deepest : PALETTE.navy, randRange(6.0, 8.8), 0.09));
+      for (let i = 0; i < 2; i++) pts.push(pt(Math.random() < 0.5 ? PALETTE.midnight : PALETTE.petrol, randRange(6.6, 9.2), 0.11));
+      for (let i = 0; i < 2; i++) pts.push(pt(PALETTE.sky, randRange(6.2, 8.8), 0.13));
+      pts.push(pt(PALETTE.ice, randRange(5.8, 8.0), 0.15));
+      return pts;
+    };
+
+    const G = {
+      points: makePoints(),
+      // Match reference behavior: mouse blob should stay dark navy.
+      cursorPoint: { x: 0.5, y: 0.5, color: hex(PALETTE.navy), radius: randRange(2.8, 3.2) },
+      cursorActive: false,
+      uniforms: {},
+      startT: performance.now(),
+      lastFrameT: performance.now(),
+      aspect: 1,
+      running: true,
+      visible: true,
+      raf: 0,
+    };
+
+    const compile = (type, src) => {
+      const s = gl.createShader(type);
+      if (!s) return null;
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) return null;
+      return s;
+    };
+
+    const prog = gl.createProgram();
+    const vs = compile(gl.VERTEX_SHADER, VERT);
+    const fs = compile(gl.FRAGMENT_SHADER, FRAG);
+    if (!prog || !vs || !fs) return;
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return;
+
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
+    gl.useProgram(prog);
+    const aPos = gl.getAttribLocation(prog, 'a_pos');
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+    G.uniforms = {
+      res: gl.getUniformLocation(prog, 'u_res'),
+      aspect: gl.getUniformLocation(prog, 'u_aspect'),
+      time: gl.getUniformLocation(prog, 'u_time'),
+      points: gl.getUniformLocation(prog, 'u_points'),
+      colors: gl.getUniformLocation(prog, 'u_colors'),
+      radii: gl.getUniformLocation(prog, 'u_radii'),
+      power: gl.getUniformLocation(prog, 'u_power'),
+      baseColor: gl.getUniformLocation(prog, 'u_baseColor'),
+      baseStrength: gl.getUniformLocation(prog, 'u_baseStrength'),
+      waveDark: gl.getUniformLocation(prog, 'u_waveDark'),
+      waveLight: gl.getUniformLocation(prog, 'u_waveLight'),
+      waveStrength: gl.getUniformLocation(prog, 'u_waveStrength'),
+    };
+
+    gl.uniform1f(G.uniforms.power, 2.35);
+    gl.uniform3fv(G.uniforms.baseColor, hex(PALETTE.navy));
+    gl.uniform1f(G.uniforms.baseStrength, 1.0);
+    gl.uniform3fv(G.uniforms.waveDark, hex(PALETTE.deepest));
+    gl.uniform3fv(G.uniforms.waveLight, hex(PALETTE.petrol));
+    gl.uniform1f(G.uniforms.waveStrength, 0.5);
+
+    const resize = () => {
+      const dpr = window.devicePixelRatio || 1;
+      const w = Math.floor(window.innerWidth * dpr);
+      const h = Math.floor(window.innerHeight * dpr);
+      canvas.width = w;
+      canvas.height = h;
+      G.aspect = window.innerWidth / Math.max(window.innerHeight, 1);
+      gl.viewport(0, 0, w, h);
+      gl.uniform2f(G.uniforms.res, w, h);
+      gl.uniform1f(G.uniforms.aspect, G.aspect);
+    };
+
+    const onMouseMove = (e) => {
+      G.cursorPoint.x = e.clientX / Math.max(window.innerWidth, 1);
+      G.cursorPoint.y = 1 - e.clientY / Math.max(window.innerHeight, 1);
+      G.cursorActive = true;
+    };
+
+    const positionsBuffer = new Float32Array(18 * 2);
+    const colorsBuffer = new Float32Array(18 * 3);
+    const radiiBuffer = new Float32Array(18);
+
+    const update = (dt) => {
+      const REPEL_RADIUS = 0.52;
+      const REPEL_STRENGTH = 2.25;
+      const MOUSE_BOUNCE_DAMPING = 0.9;
+      const BLOB_BOUNCE_DAMPING = 0.94;
+      const radiusToCollision = (radius) => radius * 0.015;
+
+      for (const pt of G.points) {
+        if (G.cursorActive) {
+          const dx = pt.x - G.cursorPoint.x;
+          const dxScreen = dx * (G.aspect || 1);
+          const dy = pt.y - G.cursorPoint.y;
+          const distScreen = Math.sqrt(dxScreen * dxScreen + dy * dy);
+          if (distScreen < REPEL_RADIUS && distScreen > 0.0001) {
+            const t = 1 - distScreen / REPEL_RADIUS;
+            const force = t * t * REPEL_STRENGTH;
+            const nx = dxScreen / distScreen;
+            const ny = dy / distScreen;
+            pt.x += (nx * force * dt) / (G.aspect || 1);
+            pt.y += ny * force * dt;
+            // Reflect velocity so interaction reads as bounce, not only shove.
+            const vxScreen = pt.vx * (G.aspect || 1);
+            const vn = vxScreen * nx + pt.vy * ny;
+            if (vn < 0) {
+              const rvxScreen = vxScreen - (1.85 * vn * nx);
+              const rvy = pt.vy - (1.85 * vn * ny);
+              pt.vx = (rvxScreen / (G.aspect || 1)) * MOUSE_BOUNCE_DAMPING;
+              pt.vy = rvy * MOUSE_BOUNCE_DAMPING;
+            }
+          }
+        }
+
+        pt.x += pt.vx * dt;
+        pt.y += pt.vy * dt;
+
+        if (pt.x < -0.1) { pt.x = -0.1; pt.vx = Math.abs(pt.vx); }
+        if (pt.x > 1.1) { pt.x = 1.1; pt.vx = -Math.abs(pt.vx); }
+        if (pt.y < -0.1) { pt.y = -0.1; pt.vy = Math.abs(pt.vy); }
+        if (pt.y > 1.1) { pt.y = 1.1; pt.vy = -Math.abs(pt.vy); }
+
+        pt.pulsePhase += pt.pulseSpeed * dt;
+        const pulse = Math.sin(pt.pulsePhase) * pt.pulseAmount;
+        pt.radius = pt.baseRadius * (1 + pulse);
+
+        pt.vx += (Math.random() - 0.5) * 0.06 * dt;
+        pt.vy += (Math.random() - 0.5) * 0.06 * dt;
+        const maxV = 0.28;
+        pt.vx = Math.max(-maxV, Math.min(maxV, pt.vx));
+        pt.vy = Math.max(-maxV, Math.min(maxV, pt.vy));
+      }
+
+      // Blob-blob collisions: separate overlaps and reflect along collision normal.
+      for (let i = 0; i < G.points.length; i++) {
+        for (let j = i + 1; j < G.points.length; j++) {
+          const a = G.points[i];
+          const b = G.points[j];
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.hypot(dx, dy) || 0.0001;
+          const minDist = radiusToCollision(a.radius) + radiusToCollision(b.radius);
+          if (dist >= minDist) continue;
+
+          const nx = dx / dist;
+          const ny = dy / dist;
+          const overlap = minDist - dist;
+
+          // Push apart equally.
+          a.x -= nx * overlap * 0.5;
+          a.y -= ny * overlap * 0.5;
+          b.x += nx * overlap * 0.5;
+          b.y += ny * overlap * 0.5;
+
+          // Equal-mass elastic impulse with light damping.
+          const vaN = a.vx * nx + a.vy * ny;
+          const vbN = b.vx * nx + b.vy * ny;
+          const relN = vbN - vaN;
+          if (relN >= 0) continue;
+          const impulse = -1.8 * relN * 0.5;
+          a.vx -= impulse * nx * BLOB_BOUNCE_DAMPING;
+          a.vy -= impulse * ny * BLOB_BOUNCE_DAMPING;
+          b.vx += impulse * nx * BLOB_BOUNCE_DAMPING;
+          b.vy += impulse * ny * BLOB_BOUNCE_DAMPING;
+        }
+      }
+    };
+
+    const draw = () => {
+      const N = G.points.length;
+      for (let i = 0; i < N; i++) {
+        const p = G.points[i];
+        positionsBuffer[i * 2] = p.x;
+        positionsBuffer[i * 2 + 1] = p.y;
+        colorsBuffer[i * 3] = p.color[0];
+        colorsBuffer[i * 3 + 1] = p.color[1];
+        colorsBuffer[i * 3 + 2] = p.color[2];
+        radiiBuffer[i] = p.radius;
+      }
+
+      const cursorSlot = 17;
+      for (let i = N; i < cursorSlot; i++) {
+        positionsBuffer[i * 2] = -10;
+        positionsBuffer[i * 2 + 1] = -10;
+        radiiBuffer[i] = 0;
+      }
+
+      if (G.cursorActive) {
+        const ci = cursorSlot;
+        positionsBuffer[ci * 2] = G.cursorPoint.x;
+        positionsBuffer[ci * 2 + 1] = G.cursorPoint.y;
+        colorsBuffer[ci * 3] = G.cursorPoint.color[0];
+        colorsBuffer[ci * 3 + 1] = G.cursorPoint.color[1];
+        colorsBuffer[ci * 3 + 2] = G.cursorPoint.color[2];
+        radiiBuffer[ci] = G.cursorPoint.radius;
+      } else {
+        positionsBuffer[cursorSlot * 2] = -10;
+        positionsBuffer[cursorSlot * 2 + 1] = -10;
+        radiiBuffer[cursorSlot] = 0;
+      }
+
+      gl.uniform1f(G.uniforms.time, (performance.now() - G.startT) / 1000);
+      gl.uniform2fv(G.uniforms.points, positionsBuffer);
+      gl.uniform3fv(G.uniforms.colors, colorsBuffer);
+      gl.uniform1fv(G.uniforms.radii, radiiBuffer);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+    };
+
+    const tick = () => {
+      if (!G.running) return;
+      const now = performance.now();
+      const dt = Math.min((now - G.lastFrameT) / 1000, 0.05);
+      G.lastFrameT = now;
+      update(dt);
+      draw();
+      G.raf = requestAnimationFrame(tick);
+    };
+
+    window.addEventListener('resize', resize);
+    document.addEventListener('mousemove', onMouseMove, { passive: true });
+    document.addEventListener('mouseleave', () => { G.cursorActive = false; });
+    document.addEventListener('visibilitychange', () => {
+      G.visible = document.visibilityState === 'visible';
+      if (G.visible) {
+        G.running = true;
+        G.lastFrameT = performance.now();
+        tick();
+      } else {
+        G.running = false;
+        cancelAnimationFrame(G.raf);
+      }
+    });
+
+    resize();
+    tick();
+  })();
+</script>

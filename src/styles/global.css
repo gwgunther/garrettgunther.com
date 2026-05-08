@@ -318,6 +318,12 @@ a:hover {
   z-index: 80;
 }
 
+@media (max-width: 860px) {
+  .site-nav-main {
+    padding-right: calc(1.9rem + var(--space-sm));
+  }
+}
+
 .dark-mode-toggle__fluid-shell {
   position: absolute;
   inset: 0;
@@ -1104,10 +1110,6 @@ a:hover {
   aspect-ratio: 16 / 9;
 }
 
-.project-list .project-card--home .project-card__thumb--embed > video {
-  object-fit: cover;
-}
-
 .project-card__media {
   position: relative;
   background: #fff;
@@ -1483,20 +1485,38 @@ a:hover {
   border: 0;
 }
 
-/* Native video / MP4: true cover behavior. */
+/* Card previews are decorative; prevent hover/focus interaction UI from providers. */
+.project-card__thumb--embed iframe {
+  pointer-events: none;
+}
+
+/* Native video / MP4 previews should show full frame on all-project cards. */
 .project-card__thumb--embed video {
-  object-fit: cover;
+  object-fit: contain;
   background: inherit;
 }
 
-/*
- * Vimeo/YouTube draw letterboxing *inside* the iframe (object-fit does not crop that).
- * Slight zoom + overflow clip hides typical player bars on grid previews.
- */
-.project-card--grid .project-card__thumb--embed iframe {
-  transform: scale(1.065);
-  transform-origin: center center;
+/* Cloudinary card previews should show full frame and no crop. */
+.project-card__thumb--cloudinary video {
+  object-fit: contain;
+  background: transparent;
 }
+
+.project-card__thumb--cloudinary {
+  background: transparent;
+}
+
+/* Keep iframe previews uncropped in the all-work grid. */
+.project-card--grid .project-card__thumb--embed iframe {
+  transform: none;
+}
+
+/* Keep homepage featured embeds uncropped. */
+.project-list .project-card--home .project-card__thumb--embed iframe {
+  pointer-events: auto;
+  transform: none;
+}
+
 
 .project-card__thumb img {
   display: block;
@@ -1800,6 +1820,13 @@ a:hover {
   width: 100%;
   height: 100%;
   border: 0;
+}
+
+/* Cloudinary iframe can show thin top/bottom bars with some source ratios.
+ * Slight zoom crops those bars while preserving a clean edge-to-edge frame. */
+.embed--cloudinary iframe {
+  transform: scale(1.028);
+  transform-origin: center center;
 }
 
 .embed video {

@@ -12,11 +12,16 @@ const { project: p, isPriority, animationIndex } = Astro.props;
 
 const hero = p.gallery[0];
 const localVideo = p.localVideo;
+const cloudinaryPreviewVideoSrc = p.cloudinaryPreviewVideoUrl;
+const cloudinaryEmbedUrl = p.cloudinaryEmbedUrl;
 const vimeoId = p.vimeo[0];
 const youtubeId = !vimeoId ? p.youtube[0] : undefined;
-const hasVideo = Boolean(localVideo || vimeoId || youtubeId);
+const youtubeDesktopEmbedUrl = youtubeId
+  ? `https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=0&mute=0&playsinline=1&controls=1&rel=0&modestbranding=1&loop=0&iv_load_policy=3&cc_load_policy=0&fs=0`
+  : undefined;
+const hasVideo = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || youtubeId);
 const hasPhotos = p.gallery.length > 0;
-const isEmbed = hasVideo;
+const isEmbed = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || youtubeId);
 ---
 
 <article
@@ -26,12 +31,46 @@ const isEmbed = hasVideo;
   <div
     class:list={[
       'project-card__thumb project-card__thumb-link',
-      { 'project-card__thumb--embed': isEmbed },
+      {
+        'project-card__thumb--embed': isEmbed,
+        'project-card__thumb--cloudinary': Boolean(cloudinaryPreviewVideoSrc),
+      },
     ]}
   >
     {
-      localVideo ? (
-        <video controls playsinline preload={isPriority ? 'metadata' : 'none'} aria-label={`${p.title} — film`}>
+      cloudinaryEmbedUrl && cloudinaryPreviewVideoSrc ? (
+        <>
+          <video
+            class="project-card__home-cloudinary-desktop"
+            controls
+            playsinline
+            preload={isPriority ? 'metadata' : 'none'}
+            aria-label={`${p.title} — film`}
+            data-home-inline-video
+          >
+            <source src={cloudinaryPreviewVideoSrc} type="video/mp4" />
+          </video>
+          <video
+            class="project-card__home-cloudinary-mobile"
+            data-mobile-autoplay-preview
+            muted
+            loop
+            autoplay
+            playsinline
+            preload={isPriority ? 'metadata' : 'none'}
+            aria-label={`${p.title} preview`}
+          >
+            <source src={cloudinaryPreviewVideoSrc} type="video/mp4" />
+          </video>
+        </>
+      ) : localVideo ? (
+        <video
+          controls
+          playsinline
+          preload={isPriority ? 'metadata' : 'none'}
+          aria-label={`${p.title} — film`}
+          data-home-inline-video
+        >
           <source src={localVideo} type="video/mp4" />
         </video>
       ) : vimeoId ? (
@@ -45,7 +84,7 @@ const isEmbed = hasVideo;
       ) : youtubeId ? (
         <iframe
           title={`${p.title} — film`}
-          src={`https://www.youtube-nocookie.com/embed/${youtubeId}`}
+          src={youtubeDesktopEmbedUrl}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowfullscreen
           loading={isPriority ? 'eager' : 'lazy'}
@@ -120,3 +159,43 @@ const isEmbed = hasVideo;
     </div>
   </a>
 </article>
+
+<script>
+  if (typeof window !== 'undefined') {
+    const inlineVideos = Array.from(document.querySelectorAll('video[data-home-inline-video]'));
+    for (const video of inlineVideos) {
+      video.addEventListener('click', (event) => {
+        // Native controls still work; this just makes a direct video-surface click play immediately.
+        if (!(event.target instanceof Element) || !event.target.closest('video')) return;
+        if (video.paused) {
+          video.play().catch(() => {});
+        }
+      });
+    }
+
+    const previews = Array.from(document.querySelectorAll('video[data-mobile-autoplay-preview]'));
+    for (const preview of previews) {
+      preview.addEventListener('pointerdown', () => {
+        if (preview.paused) {
+          preview.play().catch(() => {});
+        }
+      });
+    }
+  }
+</script>
+
+<style>
+  .project-card__home-cloudinary-mobile {
+    display: none;
+  }
+
+  @media (max-width: 900px) {
+    .project-card__home-cloudinary-desktop {
+      display: none;
+    }
+
+    .project-card__home-cloudinary-mobile {
+      display: block;
+    }
+  }
+</style>

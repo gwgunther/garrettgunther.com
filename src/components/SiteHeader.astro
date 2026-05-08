@@ -1,24 +1,75 @@
 ---
 type Props = {
-  /** Pass when on `/all/` to highlight the index link */
-  currentView?: 'all';
+  /** Highlights the matching nav item; omit on home */
+  currentView?: 'all' | 'fluid' | 'cities';
 };
 
 const { currentView } = Astro.props;
+const isFluidBackdrop = currentView === 'fluid';
 ---
 
-<header class="site-header">
+<header class:list={['site-header', isFluidBackdrop && 'site-header--fluid']}>
   <div class="wrap site-header__inner">
-    <p class="site-title">
-      <a href="/">Garrett Gunther</a>
-    </p>
+    <p class="site-title"><a
+        href="/cities/"
+        class="site-title__easter"
+        aria-label="Cities"
+      >G</a><a href="/">arrett <em>Gunther</em></a></p>
     <div class="site-header__end">
-      <nav aria-label="Work index">
+      <nav aria-label="Site">
         <ul class="site-nav-main">
+          {
+            currentView === 'all' ? (
+              <li>
+                <a href="/">Home</a>
+              </li>
+            ) : !currentView ? (
+              <li>
+                <a href="/all/">All projects</a>
+              </li>
+            ) : currentView === 'cities' ? (
+              <>
+                <li>
+                  <a href="/">Home</a>
+                </li>
+                <li aria-hidden="true">|</li>
+                <li>
+                  <a href="/all/">All projects</a>
+                </li>
+              </>
+            ) : (
+              <>
+                <li>
+                  <a href="/">Home</a>
+                </li>
+                <li>
+                  <a href="/all/">All projects</a>
+                </li>
+              </>
+            )
+          }
           <li>
-            <a href={currentView === 'all' ? '/' : '/all/'} class:list={{ 'is-active': currentView !== 'all' }}>
-              {currentView === 'all' ? 'Home' : 'All projects'}
-            </a>
+            <button
+              type="button"
+              class="dark-mode-toggle"
+              data-dark-mode-toggle
+              aria-pressed="false"
+              aria-label="Enable dark mode"
+              title="Toggle dark mode"
+            >
+              <span class="sr-only">Toggle dark mode</span>
+              <span class="dark-mode-toggle__fluid-shell" aria-hidden="true">
+                <iframe
+                  class="dark-mode-toggle__fluid"
+                  src="/flow-gradient-full.html"
+                  title=""
+                  loading="eager"
+                  tabindex="-1"
+                  aria-hidden="true"
+                ></iframe>
+              </span>
+              <span class="dark-mode-toggle__icon dark-mode-toggle__icon--sun" aria-hidden="true">☼</span>
+            </button>
           </li>
         </ul>
       </nav>

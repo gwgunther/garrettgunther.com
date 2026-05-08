@@ -8,12 +8,13 @@
   --accent-soft: rgba(27, 50, 79, 0.12);
   --accent-rgb: 27, 50, 79;
   --border: rgba(28, 27, 25, 0.1);
-  --font-display: 'Cormorant Garamond', 'Times New Roman', serif;
-  --font-ui: 'Inter Tight', system-ui, -apple-system, sans-serif;
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-ui: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --type-body-size: 0.9rem;
   --type-body-tracking: 0.02em;
   --type-label-size: 0.68rem;
-  --type-label-tracking: 0.14em;
+  --type-label-tracking: 0.17em;
   --type-label-weight: 500;
   --space-xs: 0.35rem;
   --space-sm: 0.75rem;
@@ -23,6 +24,7 @@
   --max-w: 918px;
   --header-height: 3.25rem;
   --grid-gap: var(--space-md);
+  --top-section-height: 7.1rem;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -63,6 +65,56 @@ body {
   color: var(--text);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
+}
+
+main {
+  position: relative;
+  z-index: 1;
+}
+
+.dark-mode-fluid-bg {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+  transition: opacity 420ms var(--ease-out);
+}
+
+.gg-dark-mode,
+.gg-dark-mode body {
+  background: transparent;
+}
+
+.gg-dark-mode .dark-mode-fluid-bg {
+  opacity: 1;
+}
+
+.gg-dark-mode .intro__lead,
+.gg-dark-mode .featured-label {
+  color: #fff;
+}
+
+.gg-dark-mode .featured-label {
+  border-bottom-color: rgba(255, 255, 255, 0.18);
+}
+
+.gg-dark-mode .intro-line__link,
+.gg-dark-mode .intro-work-link__num,
+.gg-dark-mode .intro-work-link__name {
+  color: #fff;
+}
+
+.gg-dark-mode .intro-line__link:hover {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.gg-dark-mode .intro-line__sep,
+.gg-dark-mode .intro-line {
+  color: rgba(255, 255, 255, 0.6);
 }
 
 img,
@@ -117,6 +169,20 @@ a:hover {
   box-shadow: none;
 }
 
+.gg-dark-mode .site-header,
+.gg-dark-mode .site-header--fluid {
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-bottom: 0;
+}
+
+.site-header--fluid {
+  background: color-mix(in srgb, var(--bg) 74%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
 .site-header__inner {
   display: flex;
   flex-wrap: wrap;
@@ -136,10 +202,15 @@ a:hover {
 .site-title {
   margin: 0;
   font-family: var(--font-display);
-  font-weight: 400;
+  font-weight: 300;
   font-size: clamp(1.75rem, 4vw, 2.35rem);
-  letter-spacing: 0.02em;
+  letter-spacing: -0.02em;
   line-height: 1.1;
+}
+
+.site-title em {
+  font-style: italic;
+  font-weight: 400;
 }
 
 .site-title a {
@@ -147,8 +218,22 @@ a:hover {
   text-decoration: none;
 }
 
+.gg-dark-mode .site-title a {
+  color: #fff;
+}
+
 .site-title a:hover {
   color: var(--accent);
+}
+
+.gg-dark-mode .site-title a:hover {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.gg-dark-mode .site-title__easter {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.14em;
 }
 
 .site-nav-main {
@@ -162,14 +247,23 @@ a:hover {
   line-height: 1;
 }
 
-.site-nav-main,
-.featured-label,
-.all-page-title {
+.site-nav-main {
+  font-family: var(--font-mono);
   font-size: 0.68rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.17em;
   text-transform: uppercase;
   line-height: 1;
+}
+
+.featured-label,
+.all-page-title {
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-size: clamp(1.15rem, 2.2vw, 1.35rem);
+  letter-spacing: -0.02em;
+  text-transform: none;
+  line-height: 1.15;
 }
 
 .site-nav-main a {
@@ -177,9 +271,172 @@ a:hover {
   text-decoration: none;
 }
 
+.gg-dark-mode .site-nav-main a {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.gg-dark-mode .site-nav-main li[aria-hidden='true'] {
+  color: rgba(255, 255, 255, 0.95);
+}
+
 .site-nav-main a:hover,
 .site-nav-main a.is-active {
   color: var(--accent);
+}
+
+.gg-dark-mode .site-nav-main a:hover,
+.gg-dark-mode .site-nav-main a.is-active {
+  color: #fff;
+}
+
+.dark-mode-toggle {
+  position: relative;
+  height: 1.9rem;
+  width: 1.9rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--accent);
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  overflow: hidden;
+  transition: background-color 0.2s var(--ease-out), color 0.2s var(--ease-out), transform 0.16s var(--ease-out);
+}
+
+.site-header .dark-mode-toggle {
+  position: fixed;
+  top: var(--space-md);
+  right: var(--space-md);
+  z-index: 80;
+}
+
+.dark-mode-toggle__fluid-shell {
+  position: absolute;
+  inset: 0;
+  border-radius: 0;
+  overflow: hidden;
+  display: block;
+  background: #0a1530;
+  isolation: isolate;
+}
+
+.dark-mode-toggle__fluid {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  pointer-events: none;
+  transform: scale(1);
+  transform-origin: center center;
+  filter: saturate(2.4) contrast(1.95) brightness(1.12);
+  opacity: 0.98;
+}
+
+.dark-mode-toggle__fluid-shell::before,
+.dark-mode-toggle__fluid-shell::after {
+  content: "";
+  position: absolute;
+  display: none;
+  inset: -30%;
+  border-radius: 48%;
+  pointer-events: none;
+  z-index: 2;
+  will-change: transform;
+}
+
+.dark-mode-toggle__fluid-shell::before {
+  background:
+    radial-gradient(22% 34% at 24% 62%, rgba(198, 224, 248, 0.92), transparent 66%),
+    radial-gradient(24% 30% at 70% 34%, rgba(78, 137, 214, 0.86), transparent 68%),
+    radial-gradient(17% 22% at 50% 52%, rgba(219, 236, 252, 0.72), transparent 62%);
+  mix-blend-mode: screen;
+  animation: dark-toggle-fluid-drift-a 8.8s ease-in-out infinite alternate;
+}
+
+.dark-mode-toggle__fluid-shell::after {
+  background:
+    radial-gradient(18% 26% at 50% 50%, rgba(43, 124, 163, 0.74), transparent 64%),
+    radial-gradient(13% 18% at 38% 44%, rgba(148, 193, 236, 0.44), transparent 58%);
+  mix-blend-mode: lighten;
+  animation: dark-toggle-fluid-drift-b 10.2s ease-in-out infinite;
+  opacity: 0.92;
+}
+
+@keyframes dark-toggle-fluid-drift-a {
+  0% {
+    transform: translate3d(-12%, 6%, 0) rotate(0deg) scale(1.06);
+  }
+  100% {
+    transform: translate3d(10%, -7%, 0) rotate(14deg) scale(1.14);
+  }
+}
+
+@keyframes dark-toggle-fluid-drift-b {
+  0% {
+    transform: translate3d(9%, -10%, 0) rotate(0deg) scale(1.1);
+  }
+  50% {
+    transform: translate3d(-9%, 8%, 0) rotate(-11deg) scale(1.18);
+  }
+  100% {
+    transform: translate3d(7%, 12%, 0) rotate(8deg) scale(1.08);
+  }
+}
+
+.dark-mode-toggle__icon {
+  position: relative;
+  z-index: 3;
+  font-size: 0.95rem;
+  line-height: 1;
+  color: #f4f1ea;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+}
+
+.dark-mode-toggle__icon--sun {
+  display: none;
+}
+
+.dark-mode-toggle:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.dark-mode-toggle:hover {
+  transform: none;
+}
+
+.dark-mode-toggle.is-active {
+  background: #fff;
+  color: #1b324f;
+}
+
+.gg-dark-mode .dark-mode-toggle {
+  color: #fff;
+  background: rgba(7, 16, 38, 0.82);
+}
+
+.gg-dark-mode .dark-mode-toggle.is-active {
+  background: #fff;
+  color: #1b324f;
+}
+
+.gg-dark-mode .dark-mode-toggle:hover {
+  transform: none;
+}
+
+.dark-mode-toggle.is-active .dark-mode-toggle__icon--sun {
+  display: inline-block;
+  color: #1b324f;
+  text-shadow: none;
+}
+
+.dark-mode-toggle.is-active .dark-mode-toggle__fluid-shell {
+  display: none;
 }
 
 .site-social {
@@ -194,12 +451,17 @@ a:hover {
   margin-left: 0.1rem;
 }
 
+.gg-dark-mode .site-header__end .site-social {
+  border-left-color: rgba(255, 255, 255, 0.24);
+}
+
 
 .site-social a {
+  font-family: var(--font-mono);
   color: var(--accent);
   text-decoration: none;
   font-size: 0.68rem;
-  font-weight: 400;
+  font-weight: 500;
   letter-spacing: 0.17em;
   text-transform: uppercase;
   line-height: 1;
@@ -207,9 +469,17 @@ a:hover {
   transition: color 0.2s var(--ease-out), opacity 0.2s var(--ease-out);
 }
 
+.gg-dark-mode .site-social a {
+  color: rgba(255, 255, 255, 0.95);
+}
+
 .site-social a:hover {
   color: var(--accent);
   opacity: 1;
+}
+
+.gg-dark-mode .site-social a:hover {
+  color: #fff;
 }
 
 /* --- Intro --- */
@@ -218,7 +488,12 @@ a:hover {
 }
 
 .intro--home {
+  padding-top: var(--space-lg);
   padding-bottom: var(--space-sm);
+}
+
+.intro-context {
+  min-height: var(--top-section-height);
 }
 
 
@@ -231,8 +506,10 @@ a:hover {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-md);
+  font-family: var(--font-mono);
   font-size: var(--type-body-size);
-  letter-spacing: var(--type-body-tracking);
+  font-weight: 500;
+  letter-spacing: var(--type-label-tracking);
   text-transform: uppercase;
 }
 
@@ -257,14 +534,13 @@ a:hover {
 
 .featured-label {
   margin: 0 0 var(--space-md);
-  font-family: var(--font-ui);
   color: #000;
   border-bottom: 1px solid var(--border);
   padding-bottom: var(--space-sm);
 }
 
-.intro-columns + .featured-label {
-  margin-top: calc(var(--space-xl) + var(--space-lg));
+.intro-context + .featured-label {
+  margin-top: var(--space-lg);
 }
 
 .intro--home .featured-label {
@@ -274,7 +550,7 @@ a:hover {
 
 .year-label {
   margin: 0 0 var(--space-md);
-  font-family: var(--font-ui);
+  font-family: var(--font-mono);
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
   letter-spacing: var(--type-label-tracking);
@@ -338,7 +614,7 @@ a:hover {
 
 .intro-work-link {
   display: grid;
-  grid-template-columns: 2.25ch auto;
+  grid-template-columns: 3.25ch auto;
   column-gap: 0.7rem;
   align-items: baseline;
   width: max-content;
@@ -359,10 +635,11 @@ a:hover {
 }
 
 .intro-line__link {
+  font-family: var(--font-mono);
   color: var(--accent);
   text-decoration: none;
   font-size: 0.68rem;
-  font-weight: 400;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.17em;
   line-height: 1.12;
@@ -404,10 +681,10 @@ a:hover {
 
 .intro-variant h3 {
   margin: 0 0 0.25rem;
-  font-family: var(--font-ui);
+  font-family: var(--font-mono);
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
-  letter-spacing: 0.14em;
+  letter-spacing: var(--type-label-tracking);
   text-transform: uppercase;
   color: var(--text-muted);
 }
@@ -446,6 +723,7 @@ a:hover {
 }
 
 .intro-path-roman {
+  font-family: var(--font-mono);
   font-size: var(--type-label-size);
   letter-spacing: var(--type-label-tracking);
   text-transform: uppercase;
@@ -483,7 +761,10 @@ a:hover {
   background: rgba(var(--bg-rgb), 0.75);
   color: var(--accent);
   text-decoration: none;
-  font-size: 0.82rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
 }
 
 .chip--soft {
@@ -495,6 +776,7 @@ a:hover {
 }
 
 .intro-path-meta {
+  font-family: var(--font-mono);
   font-size: var(--type-label-size);
   letter-spacing: var(--type-label-tracking);
   text-transform: uppercase;
@@ -526,6 +808,7 @@ a:hover {
 }
 
 .intro-path-final__roman {
+  font-family: var(--font-mono);
   font-size: var(--type-label-size);
   letter-spacing: var(--type-label-tracking);
   text-transform: uppercase;
@@ -571,23 +854,61 @@ a:hover {
 
 .all-page-title {
   margin: 0 0 var(--space-md);
-  font-family: var(--font-ui);
   color: #000;
   border-bottom: 1px solid var(--border);
   padding-bottom: var(--space-sm);
+}
+
+.gg-dark-mode .all-page-title {
+  color: #fff;
+  border-bottom-color: rgba(255, 255, 255, 0.18);
 }
 
 .all-page-title--timeline {
   margin: 0 0 calc(var(--space-lg) + var(--space-sm));
 }
 
+.all-layout {
+  position: fixed;
+  inset: calc(var(--space-md) + var(--header-height)) 0 0;
+  display: grid;
+  grid-template-rows: var(--top-section-height) minmax(0, 1fr);
+  min-height: 0;
+}
+
+.home-layout {
+  position: fixed;
+  inset: calc(var(--space-md) + var(--header-height)) 0 0;
+  min-height: 0;
+}
+
+.home-scroll {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
 .all-years {
-  position: sticky;
-  top: calc(var(--space-md) + var(--header-height));
+  position: relative;
+  top: auto;
   z-index: 45;
-  margin-bottom: var(--space-sm);
-  padding-block: var(--space-lg) var(--space-lg);
+  margin-bottom: 0;
+  min-height: var(--top-section-height);
+  padding-block: var(--space-sm);
+  display: flex;
+  align-items: flex-end;
   background: var(--bg);
+}
+
+.gg-dark-mode .all-years {
+  background: transparent;
+}
+
+.all-work-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .all-years::before {
@@ -612,6 +933,10 @@ a:hover {
   pointer-events: none;
 }
 
+.gg-dark-mode .all-years__line {
+  background: rgba(255, 255, 255, 0.32);
+}
+
 .all-years__cursor {
   position: absolute;
   left: 0;
@@ -625,6 +950,10 @@ a:hover {
   transition: left 0.18s var(--ease-out);
   cursor: ew-resize;
   touch-action: none;
+}
+
+.gg-dark-mode .all-years__cursor {
+  border-left-color: #fff;
 }
 
 .all-years__cursor::before {
@@ -672,9 +1001,9 @@ a:hover {
 }
 
 .all-years__label {
-  font-family: var(--font-ui);
+  font-family: var(--font-mono);
   font-size: 0.68rem;
-  font-weight: 400;
+  font-weight: 500;
   letter-spacing: 0.17em;
   line-height: 1;
   text-transform: uppercase;
@@ -683,26 +1012,13 @@ a:hover {
   white-space: nowrap;
 }
 
+.gg-dark-mode .all-years__label {
+  color: rgba(255, 255, 255, 0.95);
+}
+
 @media (max-width: 560px) {
   .all-years__ticks .all-years__tick:nth-child(even) {
     visibility: hidden;
-  }
-
-  .project-card--year-start {
-    margin-top: 1.75rem;
-  }
-
-  .project-year-marker {
-    top: -1.4rem;
-    left: 0;
-    right: 0;
-    transform: none;
-    text-align: center;
-  }
-
-  .project-year-marker span {
-    writing-mode: horizontal-tb;
-    transform: none;
   }
 }
 
@@ -747,6 +1063,10 @@ a:hover {
   background: transparent;
 }
 
+.gg-dark-mode .all-years__post-marker::before {
+  border-left-color: rgba(255, 255, 255, 0.32);
+}
+
 .all-years__post-marker:hover,
 .all-years__post-marker.is-active {
   height: 0.48rem;
@@ -758,8 +1078,17 @@ a:hover {
   border-left-color: rgba(0, 0, 0, 0.08);
 }
 
+.gg-dark-mode .all-years__post-marker:hover::before,
+.gg-dark-mode .all-years__post-marker.is-active::before {
+  border-left-color: rgba(255, 255, 255, 0.45);
+}
+
 .all-years__post-marker.is-selected::before {
   border-left-color: #000;
+}
+
+.gg-dark-mode .all-years__post-marker.is-selected::before {
+  border-left-color: #fff;
 }
 
 .all-years__post-marker:focus-visible {
@@ -769,13 +1098,17 @@ a:hover {
 
 /* Remove previous compact-year link styling if an older build still includes it. */
 .all-years__link {
-  font-family: var(--font-ui);
+  font-family: var(--font-mono);
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
   letter-spacing: var(--type-label-tracking);
   text-transform: uppercase;
   color: var(--text-muted);
   text-decoration: none;
+}
+
+.gg-dark-mode .all-years__link {
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .all-years__link:focus-visible {
@@ -794,7 +1127,7 @@ a:hover {
 .project-list {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--space-xl) + var(--space-sm));
+  gap: var(--space-lg);
 }
 
 /* Single-column stack: media full width, title block below (no alternating) */
@@ -820,7 +1153,7 @@ a:hover {
 
 .project-card__media {
   position: relative;
-  background: var(--bg-elevated);
+  background: #fff;
   border: 1px solid var(--border);
   overflow: hidden;
   aspect-ratio: 16 / 10;
@@ -830,6 +1163,7 @@ a:hover {
   aspect-ratio: 16 / 9;
   padding: 0;
   background: #0a0a0a;
+  border: 0;
 }
 
 .project-card__media--embed > iframe,
@@ -885,8 +1219,9 @@ a:hover {
 .project-card__copy h2 {
   margin: 0;
   font-family: var(--font-display);
-  font-weight: 400;
+  font-weight: 300;
   font-size: clamp(1.45rem, 2.5vw, 1.9rem);
+  letter-spacing: -0.02em;
   line-height: 1.15;
 }
 
@@ -973,7 +1308,8 @@ a:hover {
 
 /* --- All projects grid --- */
 .all-work-grid {
-  padding-block: var(--space-md);
+  padding-top: var(--space-sm);
+  padding-bottom: var(--space-md);
 }
 
 .project-grid {
@@ -983,7 +1319,8 @@ a:hover {
   row-gap: var(--grid-gap);
 }
 
-.project-year-marker {
+/* Must override any broad card child rules later in this file (.project-card--grid > …). */
+.project-card--year-start > .project-year-marker {
   position: absolute;
   top: 50%;
   left: calc(var(--space-md) * -0.55);
@@ -994,10 +1331,10 @@ a:hover {
   transform: translate(-50%, -50%);
 }
 
-.project-year-marker span {
+.project-card--year-start > .project-year-marker span {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
-  font-family: var(--font-ui);
+  font-family: var(--font-mono);
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
   letter-spacing: var(--type-label-tracking);
@@ -1007,10 +1344,10 @@ a:hover {
 
 @media (max-width: 560px) {
   .project-card--year-start {
-    margin-top: 1.75rem;
+    margin-top: 0;
   }
 
-  .project-year-marker {
+  .project-card--year-start > .project-year-marker {
     top: -1.4rem;
     left: 50%;
     right: auto;
@@ -1018,7 +1355,7 @@ a:hover {
     text-align: center;
   }
 
-  .project-year-marker span {
+  .project-card--year-start > .project-year-marker span {
     writing-mode: horizontal-tb;
     transform: none;
   }
@@ -1034,7 +1371,7 @@ a:hover {
   left: var(--space-xs);
   z-index: 2;
   padding: 0.2rem 0.45rem;
-  font-family: var(--font-ui);
+  font-family: var(--font-mono);
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
   letter-spacing: var(--type-label-tracking);
@@ -1059,16 +1396,37 @@ a:hover {
   flex-direction: column;
   gap: var(--space-sm);
   padding: var(--space-sm);
-  background: var(--bg-elevated);
+  background: #fff;
   border: 1px solid var(--border);
   color: inherit;
   animation: rise 0.65s var(--ease-out) both;
-  transition: border-color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+  transition: box-shadow 0.2s var(--ease-out);
+  overflow: hidden;
+}
+
+.gg-dark-mode .project-card__thumb,
+.gg-dark-mode .project-card__media,
+.gg-dark-mode .project-card--grid,
+.gg-dark-mode .project-hero__inner {
+  background: #fff;
 }
 
 .project-card--grid:hover {
-  border-color: rgba(var(--accent-rgb), 0.35);
   box-shadow: 0 8px 28px rgba(28, 27, 25, 0.06);
+}
+
+/* Hover visuals removed for a clean static card. */
+.project-card--grid::before,
+.project-card--grid::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Only thumb + meta link — exclude .project-year-marker or it steals flex space and blows vertical rhythm. */
+.project-card--grid > .project-card__thumb,
+.project-card--grid > .project-card__grid-link {
+  position: relative;
+  z-index: 1;
 }
 
 .project-card__thumb {
@@ -1092,8 +1450,10 @@ a:hover {
 }
 
 .project-card__thumb--embed {
-  background: #0a0a0a;
-  border-color: rgba(255, 255, 255, 0.08);
+  /* Vimeo/YouTube letterbox regions are effectively transparent;
+   * match whatever the card thumb background is for the current theme. */
+  background: inherit;
+  border: 0;
 }
 
 .project-card__thumb--embed iframe,
@@ -1108,7 +1468,7 @@ a:hover {
 /* Native video / MP4: true cover behavior. */
 .project-card__thumb--embed video {
   object-fit: cover;
-  background: #0a0a0a;
+  background: inherit;
 }
 
 /*
@@ -1121,6 +1481,7 @@ a:hover {
 }
 
 .project-card__thumb img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -1131,6 +1492,10 @@ a:hover {
   transform: scale(1.03);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  /* no-op: hover mesh removed */
+}
+
 .project-card__thumb--film {
   display: grid;
   place-items: center;
@@ -1139,6 +1504,7 @@ a:hover {
 }
 
 .project-card__thumb-fallback {
+  font-family: var(--font-mono);
   font-size: var(--type-label-size);
   letter-spacing: var(--type-label-tracking);
   text-transform: uppercase;
@@ -1172,10 +1538,12 @@ a:hover {
 .project-card__grid-title {
   margin: 0;
   font-family: var(--font-display);
-  font-weight: 400;
+  font-weight: 300;
   font-size: 1.15rem;
+  letter-spacing: -0.02em;
   line-height: 1.2;
   color: var(--text);
+  transition: color 0.32s ease, text-shadow 0.32s ease;
 }
 
 .project-card__type-icons--grid {
@@ -1183,6 +1551,9 @@ a:hover {
   margin-left: 0;
   padding: 0.12rem 0 0 0.35rem;
   opacity: 0.48;
+  transition:
+    color 0.32s ease,
+    opacity 0.32s ease;
 }
 
 .project-card__type-icons--grid .project-card__type-icon svg {
@@ -1199,9 +1570,39 @@ a:hover {
   opacity: 0.82;
 }
 
+.project-card--grid:hover .project-card__grid-title,
+.project-card--grid:focus-within .project-card__grid-title {
+  color: var(--accent);
+}
+
+.project-card--grid:hover .project-card__meta,
+.project-card--grid:focus-within .project-card__meta {
+  color: inherit;
+}
+
+.project-card--grid:hover .project-card__type-icons--grid,
+.project-card--grid:focus-within .project-card__type-icons--grid {
+  color: var(--accent);
+  opacity: 0.82;
+}
+
+.project-card--grid:hover .project-card__grid-link:hover .project-card__grid-title,
+.project-card--grid:focus-within .project-card__grid-link:hover .project-card__grid-title {
+  color: var(--accent);
+}
+
+.project-card--grid:hover .project-card__grid-link:hover .project-card__type-icons--grid,
+.project-card--grid:focus-within .project-card__grid-link:hover .project-card__type-icons--grid {
+  color: var(--accent);
+  opacity: 0.82;
+}
+
 .project-card--grid .project-card__meta {
   font-size: var(--type-body-size);
   margin: 0;
+  transition:
+    color 0.32s ease,
+    text-shadow 0.32s ease;
 }
 
 /* --- Project detail --- */
@@ -1250,8 +1651,9 @@ a:hover {
 .project-detail h1 {
   margin: 0 0 var(--space-sm);
   font-family: var(--font-display);
-  font-weight: 400;
+  font-weight: 300;
   font-size: clamp(2rem, 5vw, 3rem);
+  letter-spacing: -0.02em;
   line-height: 1.08;
 }
 
@@ -1289,7 +1691,7 @@ a:hover {
 
 .project-detail .detail-nav__prev,
 .project-detail .detail-nav__next {
-  font-family: var(--font-ui);
+  font-family: var(--font-mono);
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
   letter-spacing: var(--type-label-tracking);
@@ -1339,7 +1741,9 @@ a:hover {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
-  background: #0a0a0a;
+  /* Letterbox/pillarbox regions are effectively transparent; match the
+   * surrounding container (light/dark) instead of forcing black. */
+  background: inherit;
 }
 
 .embed iframe,
@@ -1353,7 +1757,7 @@ a:hover {
 
 .embed video {
   object-fit: contain;
-  background: #0a0a0a;
+  background: inherit;
 }
 
 .embed + .embed {
@@ -1442,8 +1846,9 @@ a:hover {
 
 .not-found h1 {
   font-family: var(--font-display);
-  font-weight: 400;
+  font-weight: 300;
   font-size: clamp(2rem, 6vw, 3.5rem);
+  letter-spacing: -0.02em;
   margin-bottom: var(--space-md);
 }
 

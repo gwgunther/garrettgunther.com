@@ -1,0 +1,42 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+---
+
+<BaseLayout
+  title="Cities"
+  description="Interactive cities fluid study."
+  canonicalPath="/cities/"
+>
+  <SiteHeader currentView="cities" />
+  <main id="main" class="cities-page">
+    <iframe
+      class="cities-frame"
+      src="/cities.html"
+      title="Cities fluid study"
+      loading="eager"
+      referrerpolicy="no-referrer"
+    ></iframe>
+  </main>
+</BaseLayout>
+
+<style is:global>
+  .cities-page {
+    margin: 0;
+    padding-inline: var(--space-md);
+    padding-bottom: var(--space-lg);
+  }
+
+  .cities-frame {
+    width: 100%;
+    height: calc(100dvh - var(--header-height) - var(--space-md));
+    border: 0;
+    background: transparent;
+  }
+
+  @media (max-width: 760px) {
+    .cities-frame {
+      height: calc(100dvh - var(--header-height) - var(--space-sm));
+    }
+  }
+</style>

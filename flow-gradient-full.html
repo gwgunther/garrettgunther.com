@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dark — Fluid Background</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #050a18;
+  }
+
+  .flow-card {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    isolation: isolate;
+    cursor: none;
+  }
+
+  .flow-card canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    opacity: 0;
+    transition: opacity 900ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .flow-card canvas.ready { opacity: 1; }
+  .flow-card .card-body { display: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .flow-card canvas { display: none; }
+    body { background: #0a1530; }
+  }
+</style>
+</head>
+<body>
+
+<div class="flow-card" data-flow>
+  <div class="card-body"></div>
+</div>
+
+<script type="x-shader/x-vertex" id="vert">
+attribute vec2 a_pos;
+varying vec2 v_uv;
+void main() {
+  v_uv = a_pos * 0.5 + 0.5;
+  gl_Position = vec4(a_pos, 0.0, 1.0);
+}
+</script>
+
+<!-- ============================================================
+     PASS 1: ADVECT VELOCITY (with ambient curl injection)
+     ============================================================ -->
+<script type="x-shader/x-fragment" id="fragAdvectVel">
+precision highp float;
+varying vec2 v_uv;
+uniform sampler2D u_velocity;
+uniform vec2 u_res;
+uniform float u_dt;
+uniform float u_time;
+uniform float u_viscosity;
+uniform float u_ambient;       // strength of ambient curl injection
+
+vec3 mod289(vec3 x){return x - floor(x*(1.0/289.0))*289.0;}
+vec2 mod289(vec2 x){return x - floor(x*(1.0/289.0))*289.0;}
+vec3 permute(vec3 x){return mod289(((x*34.0)+1.0)*x);}
+
+float snoise(vec2 v){
+  const vec4 C = vec4(0.211324865405187, 0.366025403784439,
+                     -0.577350269189626, 0.024390243902439);
+  vec2 i  = floor(v + dot(v, C.yy));
+  vec2 x0 = v -   i + dot(i, C.xx);
+  vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+  vec4 x12 = x0.xyxy + C.xxzz; x12.xy -= i1;
+  i = mod289(i);
+  vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0))
+                  + i.x + vec3(0.0, i1.x, 1.0));
+  vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+  m = m*m; m = m*m;
+  vec3 x = 2.0 * fract(p * C.www) - 1.0;
+  vec3 h = abs(x) - 0.5;
+  vec3 ox = floor(x + 0.5);
+  vec3 a0 = x - ox;
+  m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
+  vec3 g;
+  g.x  = a0.x  * x0.x  + h.x  * x0.y;
+  g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+  return 130.0 * dot(m, g);
+}
+
+// Curl of a slowly-evolving 2D potential field. Always
+// divergence-free, so injecting it doesn't violate fluid laws.
+// This is what gives the fluid perpetual gentle motion.
+vec2 ambientCurl(vec2 uv, float t) {
+  float eps = 0.02;
+  vec2 p = uv * 2.5 + vec2(0.0, t * 0.1);
+  float fx1 = snoise(p + vec2(0.0, eps));
+  float fx2 = snoise(p - vec2(0.0, eps));
+  float fy1 = snoise(p + vec2(eps, 0.0));
+  float fy2 = snoise(p - vec2(eps, 0.0));
+  return vec2((fx1 - fx2), -(fy1 - fy2)) / (2.0 * eps);
+}
+
+void main() {
+  vec2 vel = texture2D(u_velocity, v_uv).xy - 0.5;
+
+  // Self-advection
+  vec2 srcUV = v_uv - vel * u_dt;
+  vec2 newVel = texture2D(u_velocity, srcUV).xy - 0.5;
+  newVel *= u_viscosity;
+
+  // Add ambient curl noise as a constant gentle force.
+  // This is the "perpetual motion" — the fluid is always being
+  // gently pushed by an invisible slow current.
+  vec2 ambient = ambientCurl(v_uv, u_time) * u_ambient * u_dt;
+  newVel += ambient;
+
+  newVel = clamp(newVel, -0.49, 0.49);
+  gl_FragColor = vec4(newVel + 0.5, 0.0, 1.0);
+}
+</script>
+
+<!-- ============================================================
+     PASS 2: ADD CURSOR FORCE
+     ============================================================ -->
+<script type="x-shader/x-fragment" id="fragForce">
+precision highp float;
+varying vec2 v_uv;
+uniform sampler2D u_velocity;
+uniform vec2 u_cursor;
+uniform vec2 u_cursorVel;
+uniform float u_cursorActive;
+uniform float u_dt;
+
+void main() {
+  vec2 vel = texture2D(u_velocity, v_uv).xy - 0.5;
+
+  if (u_cursorActive > 0.5) {
+    vec2 dCursor = v_uv - u_cursor;
+    float d = length(dCursor);
+    float radius = 0.10;
+    float force = exp(-d * d / (radius * radius));
+    vel += u_cursorVel * force * u_dt * 3.5;
+  }
+
+  vel = clamp(vel, -0.49, 0.49);
+  gl_FragColor = vec4(vel + 0.5, 0.0, 1.0);
+}
+</script>
+
+<!-- ============================================================
+     PASS 3: PROJECTION (weakened)
+     We keep this step but use a weaker subtraction (0.25 instead of
+     0.5) so it does less averaging. This means the sim is somewhat
+     compressible — dye won't perfectly preserve volume — but
+     patterns last MUCH longer before becoming uniform gray.
+     ============================================================ -->
+<script type="x-shader/x-fragment" id="fragProject">
+precision highp float;
+varying vec2 v_uv;
+uniform sampler2D u_velocity;
+uniform vec2 u_res;
+
+void main() {
+  vec2 px = 1.0 / u_res;
+  vec2 vL = texture2D(u_velocity, v_uv - vec2(px.x, 0.0)).xy - 0.5;
+  vec2 vR = texture2D(u_velocity, v_uv + vec2(px.x, 0.0)).xy - 0.5;
+  vec2 vB = texture2D(u_velocity, v_uv - vec2(0.0, px.y)).xy - 0.5;
+  vec2 vT = texture2D(u_velocity, v_uv + vec2(0.0, px.y)).xy - 0.5;
+  vec2 vC = texture2D(u_velocity, v_uv).xy - 0.5;
+
+  float div = 0.5 * ((vR.x - vL.x) + (vT.y - vB.y));
+  // Weaker projection coefficient — patterns survive longer
+  vC.x -= 0.25 * div;
+  vC.y -= 0.25 * div;
+
+  vC = clamp(vC, -0.49, 0.49);
+  gl_FragColor = vec4(vC + 0.5, 0.0, 1.0);
+}
+</script>
+
+<!-- ============================================================
+     PASS 4: REACTION-DIFFUSION + ADVECTION (Gray-Scott)
+     Replaces the simple dye advection. Now each pixel does THREE
+     things per frame:
+       1. Advect: where would I have come from in the velocity field?
+       2. Diffuse: average slightly with neighbors (different rates
+          for U and V — this is what creates patterns)
+       3. React: U + 2V → 3V (V eats U to reproduce); also feed U,
+          kill V at constant rates.
+     The R channel stores U concentration (feedstock), G stores V
+     (reactant). The "ink" we render is V.
+     ============================================================ -->
+<script type="x-shader/x-fragment" id="fragAdvectDye">
+precision highp float;
+varying vec2 v_uv;
+uniform sampler2D u_velocity;
+uniform sampler2D u_dye;
+uniform vec2 u_res;
+uniform float u_dt;
+uniform float u_dyeDecay;     // unused but kept for API symmetry
+
+// Cursor uniforms for direct V injection
+uniform vec2 u_cursor;        // cursor in card-local UV space
+uniform float u_cursorActive; // 1 when cursor is over this card
+uniform float u_cursorSpeed;  // 0..1, how fast cursor is moving
+
+// Gray-Scott parameters. The pair (feed, kill) determines what kind
+// of pattern emerges — spots, stripes, coral, mazes, etc.
+uniform float u_feed;
+uniform float u_kill;
+
+// Diffusion rates. V diffuses slower than U — this asymmetry is
+// MANDATORY for pattern formation (Turing's original insight).
+// Equal rates → uniform mix. Different rates → patterns.
+uniform float u_dU;
+uniform float u_dV;
+
+void main() {
+  vec2 px = 1.0 / u_res;
+
+  // ---- ADVECTION ----
+  vec2 vel = texture2D(u_velocity, v_uv).xy - 0.5;
+  vec2 srcUV = v_uv - vel * u_dt;
+  vec2 uv_advected = texture2D(u_dye, srcUV).rg;
+  float U = uv_advected.r;
+  float V = uv_advected.g;
+
+  // ---- DIFFUSION (5-point Laplacian on advected coords) ----
+  // Sample neighbors AT THE ADVECTED POSITION so diffusion happens
+  // in the moving frame of the fluid. This way chemicals diffuse
+  // around as they're carried by flow.
+  vec2 nL = texture2D(u_dye, srcUV - vec2(px.x, 0.0)).rg;
+  vec2 nR = texture2D(u_dye, srcUV + vec2(px.x, 0.0)).rg;
+  vec2 nB = texture2D(u_dye, srcUV - vec2(0.0, px.y)).rg;
+  vec2 nT = texture2D(u_dye, srcUV + vec2(0.0, px.y)).rg;
+  vec2 lap = nL + nR + nB + nT - 4.0 * vec2(U, V);
+
+  // ---- REACTION ----
+  // The classic Gray-Scott reaction:
+  //   dU/dt = dU * ∇²U  -  U·V²  +  feed·(1 - U)
+  //   dV/dt = dV * ∇²V  +  U·V²  -  (kill + feed)·V
+  // U is consumed by V², V is produced by U·V², V decays at rate kill.
+  // The (1-U)*feed term replenishes U toward 1.0 — without this the
+  // system would just consume U until nothing happens.
+  float UVV = U * V * V;
+  float dU_dt = u_dU * lap.x - UVV + u_feed * (1.0 - U);
+  float dV_dt = u_dV * lap.y + UVV - (u_kill + u_feed) * V;
+
+  // Use a fixed integration timestep larger than the rendering dt.
+  // Reaction-diffusion with the chosen feed/kill needs ~1.0/step to
+  // produce visible pattern formation at this resolution.
+  float rdDt = 1.0;
+
+  U += dU_dt * rdDt;
+  V += dV_dt * rdDt;
+
+  // ---- CURSOR INJECTION ----
+  // Directly write V (reactant) into the field at the cursor position,
+  // proportional to cursor speed. This drops "fresh ink" wherever you
+  // move, triggering new pattern growth in the cursor's path.
+  // The chemistry then propagates from these new sites organically.
+  // We also locally deplete U slightly to simulate the cursor "consuming
+  // substrate" — this prevents the new V from being immediately killed.
+  if (u_cursorActive > 0.5) {
+    float dCursor = length(v_uv - u_cursor);
+    float radius = 0.06;
+    float bubble = 1.0 - smoothstep(0.0, radius, dCursor);
+    bubble = bubble * bubble * (3.0 - 2.0 * bubble);
+    // Inject V scaled by cursor speed — fast moves = strong injection,
+    // slow moves = subtle. This makes drag gestures feel like painting.
+    V += bubble * u_cursorSpeed * 0.5;
+    U -= bubble * u_cursorSpeed * 0.2;
+  }
+
+  // Clamp to valid concentrations
+  U = clamp(U, 0.0, 1.0);
+  V = clamp(V, 0.0, 1.0);
+
+  gl_FragColor = vec4(U, V, 0.0, 1.0);
+}
+</script>
+
+<!-- ============================================================
+     PASS 5: RENDER (Gray-Scott pattern visualization)
+     The V channel holds the chemical pattern — high V = "ink",
+     low V = "background". We map V intensity through a navy
+     palette ramp.
+     ============================================================ -->
+<script type="x-shader/x-fragment" id="fragRender">
+precision highp float;
+varying vec2 v_uv;
+
+uniform sampler2D u_dye;
+uniform vec3 u_cBase;
+uniform vec3 u_cR;
+uniform vec3 u_cG;
+uniform vec3 u_cB;
+
+float hash21(vec2 p){
+  p = fract(p * vec2(123.34, 456.21));
+  p += dot(p, p + 45.32);
+  return fract(p.x * p.y);
+}
+
+void main() {
+  vec2 chems = texture2D(u_dye, v_uv).rg;
+  float U = chems.r;
+  float V = chems.g;
+
+  // V is the reactant — its concentration is the pattern. With our
+  // chosen parameters, V hovers in roughly 0.0..0.5 range. Map this
+  // TIGHT mapping: only the sharp peaks of V become bright.
+  // smoothstep(0.25, 0.45, V) means V must be above 0.25 before
+  // any color appears, and hits full brightness at 0.45. Since most
+  // of the field sits below 0.25, the result is thin crisp streaks
+  // on a near-solid dark background — like fine veins, not blobs.
+  float n = smoothstep(0.25, 0.45, V);
+
+  // Reaction front glow — only fires where V is actually peaking
+  float frontGlow = smoothstep(0.50, 0.30, U) * smoothstep(0.3, 0.6, V) * 0.5;
+
+  // Palette: background stays almost fully navy. Color only appears
+  // in the thin bright streak zones.
+  vec3 col = u_cBase;
+  col = mix(col, u_cG, smoothstep(0.0, 0.5, n));
+  col = mix(col, u_cR, smoothstep(0.4, 0.9, n));
+  col = mix(col, u_cB, smoothstep(0.8, 1.0, n) * 0.7);
+
+  col += vec3(0.04, 0.07, 0.12) * frontGlow;
+
+  // Subtle grain
+  float grain = (hash21(gl_FragCoord.xy) - 0.5) * 0.025;
+  col += grain;
+
+  // Vignette
+  float vig = smoothstep(1.6, 0.5, length(v_uv - 0.5));
+  col *= mix(0.92, 1.02, vig);
+
+  gl_FragColor = vec4(col, 1.0);
+}
+</script>
+
+<!-- ============================================================
+     PASS 6: INITIAL DYE
+     Three independent noise patterns into R, G, B. Each starts
+     at a different scale and seed so the three "dyes" already
+     have distinct distributions when the sim begins.
+     ============================================================ -->
+<script type="x-shader/x-fragment" id="fragInitDye">
+precision highp float;
+varying vec2 v_uv;
+uniform vec2 u_seed;
+
+vec3 mod289(vec3 x){return x - floor(x*(1.0/289.0))*289.0;}
+vec2 mod289(vec2 x){return x - floor(x*(1.0/289.0))*289.0;}
+vec3 permute(vec3 x){return mod289(((x*34.0)+1.0)*x);}
+
+float snoise(vec2 v){
+  const vec4 C = vec4(0.211324865405187, 0.366025403784439,
+                     -0.577350269189626, 0.024390243902439);
+  vec2 i  = floor(v + dot(v, C.yy));
+  vec2 x0 = v -   i + dot(i, C.xx);
+  vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+  vec4 x12 = x0.xyxy + C.xxzz; x12.xy -= i1;
+  i = mod289(i);
+  vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0))
+                  + i.x + vec3(0.0, i1.x, 1.0));
+  vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+  m = m*m; m = m*m;
+  vec3 x = 2.0 * fract(p * C.www) - 1.0;
+  vec3 h = abs(x) - 0.5;
+  vec3 ox = floor(x + 0.5);
+  vec3 a0 = x - ox;
+  m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
+  vec3 g;
+  g.x  = a0.x  * x0.x  + h.x  * x0.y;
+  g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+  return 130.0 * dot(m, g);
+}
+
+float fbm(vec2 p, int octaves) {
+  float v = 0.0;
+  float a = 0.5;
+  for (int i = 0; i < 5; i++) {
+    if (i >= octaves) break;
+    v += a * snoise(p);
+    p *= 2.05;
+    a *= 0.5;
+  }
+  return v;
+}
+
+void main() {
+  // Three independent noise samples — different frequencies and
+  // offsets so the three channels have completely different patterns.
+  vec2 p = v_uv * 4.0 + u_seed;
+
+  // ---- GRAY-SCOTT INITIAL CONDITIONS ----
+  // U starts at 1.0 (full feedstock everywhere — there's plenty
+  // of substrate available for the reaction).
+  // V starts at 0 EXCEPT for sparse seed blobs where V > 0. Those
+  // blobs are where the reaction begins; from there, V will spread
+  // and form patterns based on the feed/kill parameters.
+  //
+  // V values need to be HIGH enough (~0.5-1.0) at the seed sites
+  // that the reaction has real fuel to start. Too-low seeds get
+  // washed out by the kill term before they can catch.
+  float U = 1.0;
+
+  // V seeds: scattered blobs at V≈0.7 strength. Use a multi-scale
+  // noise threshold to get organic-looking initial patches rather
+  // than uniform noise.
+  float seedNoise = fbm(p * 1.5, 4) * 0.5 + 0.5;
+  float V = smoothstep(0.55, 0.62, seedNoise) * 0.7;
+  // Add scattered tiny seeds for additional nucleation points
+  float seedNoise2 = fbm(p * 5.0 + vec2(13.7, 5.2), 4) * 0.5 + 0.5;
+  V += smoothstep(0.65, 0.72, seedNoise2) * 0.5;
+  V = clamp(V, 0.0, 1.0);
+
+  // Slightly deplete U where V is high — represents the fact that
+  // the reaction has already begun in those patches, so U has been
+  // partially consumed locally. This kicks the dynamics off in a
+  // more realistic state.
+  U -= V * 0.4;
+  U = clamp(U, 0.0, 1.0);
+
+  gl_FragColor = vec4(U, V, 0.0, 1.0);
+}
+</script>
+
+<script>
+const FluidMarble = (() => {
+  const VERT = document.getElementById('vert').textContent;
+  const FRAG_ADVECT_VEL = document.getElementById('fragAdvectVel').textContent;
+  const FRAG_FORCE = document.getElementById('fragForce').textContent;
+  const FRAG_PROJECT = document.getElementById('fragProject').textContent;
+  const FRAG_ADVECT_DYE = document.getElementById('fragAdvectDye').textContent;
+  const FRAG_RENDER = document.getElementById('fragRender').textContent;
+  const FRAG_INIT = document.getElementById('fragInitDye').textContent;
+
+  // Dark mode button / backdrop Gray-Scott config.
+  const CONFIG = { feed: 0.025, kill: 0.060, dU: 0.30, dV: 0.10 };
+
+  // Generate cards. Single-config version uses the layout from v2-tuned.
+  // No pre-generation needed — cards are in the HTML.
+
+  // Three colors mapped to the three dye channels, plus a base
+  // background. Tuned so they read as a navy-dominant marble
+  // with petrol/teal/cyan accents.
+  const COLOR_BASE = '#0a1530';   // deep navy background
+  const COLOR_R    = '#3a6bb0';   // petrol blue (R channel dye)
+  const COLOR_G    = '#1f5d7a';   // dark teal (G channel dye)
+  const COLOR_B    = '#a8c8e8';   // light cyan (B channel dye)
+
+  const hex = h => {
+    const n = parseInt(h.replace('#',''), 16);
+    return [((n>>16)&255)/255, ((n>>8)&255)/255, (n&255)/255];
+  };
+
+  const G = {
+    instances: [],
+    lastFrameT: performance.now(),
+    startT: performance.now(),
+
+    mx: -9999, my: -9999,
+    smx: -9999, smy: -9999,
+    pmx: -9999, pmy: -9999,
+    cursorVx: 0, cursorVy: 0,
+
+    hoverCount: 0,
+    running: false,
+    visible: true,
+    raf: 0,
+
+    pageW: 1, pageH: 1,
+  };
+
+  function compileShader(gl, type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+      console.error(gl.getShaderInfoLog(s));
+    }
+    return s;
+  }
+
+  function makeProgram(gl, vertSrc, fragSrc) {
+    const prog = gl.createProgram();
+    gl.attachShader(prog, compileShader(gl, gl.VERTEX_SHADER, vertSrc));
+    gl.attachShader(prog, compileShader(gl, gl.FRAGMENT_SHADER, fragSrc));
+    gl.linkProgram(prog);
+    return prog;
+  }
+
+  function makeFBO(gl, width, height) {
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    const fb = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+    return { fb, tex, width, height };
+  }
+
+  function attach(el) {
+    const canvas = document.createElement('canvas');
+    el.insertBefore(canvas, el.firstChild);
+
+    const gl = canvas.getContext('webgl', {
+      antialias: false, premultipliedAlpha: false, powerPreference: 'low-power'
+    });
+    if (!gl) { canvas.remove(); return; }
+
+    const programs = {
+      advectVel: makeProgram(gl, VERT, FRAG_ADVECT_VEL),
+      force: makeProgram(gl, VERT, FRAG_FORCE),
+      project: makeProgram(gl, VERT, FRAG_PROJECT),
+      advectDye: makeProgram(gl, VERT, FRAG_ADVECT_DYE),
+      render: makeProgram(gl, VERT, FRAG_RENDER),
+      init: makeProgram(gl, VERT, FRAG_INIT),
+    };
+
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
+
+    function bindAttrib(prog) {
+      const aPos = gl.getAttribLocation(prog, 'a_pos');
+      gl.enableVertexAttribArray(aPos);
+      gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+    }
+
+    // Set palette uniforms on render program once
+    gl.useProgram(programs.render);
+    gl.uniform3fv(gl.getUniformLocation(programs.render, 'u_cBase'), hex(COLOR_BASE));
+    gl.uniform3fv(gl.getUniformLocation(programs.render, 'u_cR'),    hex(COLOR_R));
+    gl.uniform3fv(gl.getUniformLocation(programs.render, 'u_cG'),    hex(COLOR_G));
+    gl.uniform3fv(gl.getUniformLocation(programs.render, 'u_cB'),    hex(COLOR_B));
+
+    // Higher sim resolution for better detail preservation
+    // SIM_DENSITY defined inside measure() below
+
+    const inst = {
+      el, canvas, gl, programs, buf, bindAttrib,
+      cssW: 0, cssH: 0,
+      offsetX: 0, offsetY: 0,
+      simW: 0, simH: 0,
+      velA: null, velB: null,
+      dyeA: null, dyeB: null,
+      initialized: false,
+      // Per-card reaction-diffusion parameters. In single-config mode
+      // all cards use the same CONFIG; in grid mode each card has
+      // _rdConfig set on its element.
+      rdConfig: el._rdConfig || CONFIG,
+    };
+
+    function makeBuffers(simW, simH) {
+      [inst.velA, inst.velB, inst.dyeA, inst.dyeB].forEach(b => {
+        if (b) {
+          gl.deleteFramebuffer(b.fb);
+          gl.deleteTexture(b.tex);
+        }
+      });
+
+      inst.velA = makeFBO(gl, simW, simH);
+      inst.velB = makeFBO(gl, simW, simH);
+      inst.dyeA = makeFBO(gl, simW, simH);
+      inst.dyeB = makeFBO(gl, simW, simH);
+      inst.simW = simW;
+      inst.simH = simH;
+
+      [inst.velA, inst.velB].forEach(b => {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, b.fb);
+        gl.viewport(0, 0, simW, simH);
+        gl.clearColor(0.5, 0.5, 0.0, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+      });
+
+      // Init dye with seeded noise
+      gl.bindFramebuffer(gl.FRAMEBUFFER, inst.dyeA.fb);
+      gl.viewport(0, 0, simW, simH);
+      gl.useProgram(programs.init);
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      bindAttrib(programs.init);
+      gl.uniform2f(
+        gl.getUniformLocation(programs.init, 'u_seed'),
+        Math.random() * 100, Math.random() * 100
+      );
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+      // Also init B with the same content via a copy (just rerun init
+      // with same seed — easier than copying)
+      gl.bindFramebuffer(gl.FRAMEBUFFER, inst.dyeB.fb);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      inst.initialized = true;
+
+      // ---- PRE-WARM (progressive) ----
+      // Reaction-diffusion needs MANY more steps than passive dye to
+      // develop visible patterns. The seed blobs have to grow, react,
+      // diffuse, and form structures before the card looks interesting.
+      // 600 steps ≈ 10 seconds of simulation evolution. Run progressively
+      // over ~50 frames in the main loop so the page doesn't freeze.
+      inst.prewarmRemaining = 600;
+      inst.prewarmTime = 0;
+    }
+
+    // SIM_DENSITY: sim pixels per CSS pixel. Keeping this constant
+    // means pattern density is the same regardless of element size —
+    // full screen just shows more of the pattern, not a zoomed version.
+    // 0.28 ≈ 1 sim pixel per ~3.6 CSS pixels, matching original card feel.
+    const SIM_DENSITY = 0.28;
+    // For tiny embeds (dark mode toggle), match cities-card behavior by
+    // using a fixed simulation target width rather than density scaling.
+    const TINY_EMBED_THRESHOLD = 120;
+    const TINY_SIM_W_TARGET = 320;
+
+    const measure = () => {
+      const rect = el.getBoundingClientRect();
+      inst.cssW = rect.width;
+      inst.cssH = rect.height;
+      inst.offsetX = rect.left + window.scrollX;
+      inst.offsetY = rect.top + window.scrollY;
+
+      const dpr = (window.devicePixelRatio || 1) * 1.0;
+      const w = Math.max(1, Math.floor(rect.width * dpr));
+      const h = Math.max(1, Math.floor(rect.height * dpr));
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w; canvas.height = h;
+      }
+
+      const isTinyEmbed = rect.width <= TINY_EMBED_THRESHOLD && rect.height <= TINY_EMBED_THRESHOLD;
+      const aspect = rect.height / Math.max(rect.width, 1);
+      // Tiny embeds use the same fixed-target sizing strategy as /cities cards
+      // so the behavior/texture feels identical at small sizes.
+      const newSimW = isTinyEmbed
+        ? TINY_SIM_W_TARGET
+        : Math.max(2, Math.round(rect.width * SIM_DENSITY));
+      const newSimH = isTinyEmbed
+        ? Math.max(2, Math.round(TINY_SIM_W_TARGET * aspect))
+        : Math.max(2, Math.round(rect.height * SIM_DENSITY));
+      if (inst.simW !== newSimW || inst.simH !== newSimH) {
+        makeBuffers(newSimW, newSimH);
+      }
+    };
+
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+
+    el.addEventListener('mouseenter', () => { G.hoverCount++; });
+    el.addEventListener('mouseleave', () => {
+      G.hoverCount = Math.max(0, G.hoverCount - 1);
+    });
+
+    measure();
+    G.instances.push(inst);
+    return inst;
+  }
+
+  // Run simulation passes 1-4 (advect velocity, force, project, advect dye).
+  // Does NOT render to canvas. Used both by drawInstance and by pre-warm.
+  function runSimSteps(inst, dt, time, noCursor) {
+    const { gl, programs, buf, bindAttrib } = inst;
+
+    let cursorUVx = -10, cursorUVy = -10, cursorActive = 0;
+    let cursorVx = 0, cursorVy = 0;
+    if (!noCursor && G.smx !== -9999) {
+      const localX = G.smx - inst.offsetX;
+      const localY = G.smy - inst.offsetY;
+      cursorUVx = localX / inst.cssW;
+      cursorUVy = 1.0 - (localY / inst.cssH);
+      if (cursorUVx > 0.0 && cursorUVx < 1.0 && cursorUVy > 0.0 && cursorUVy < 1.0) {
+        cursorActive = 1;
+      }
+      cursorVx = G.cursorVx / inst.cssW;
+      cursorVy = -G.cursorVy / inst.cssH;
+    }
+
+    // PASS 1: Advect velocity (with ambient curl)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, inst.velB.fb);
+    gl.viewport(0, 0, inst.simW, inst.simH);
+    gl.useProgram(programs.advectVel);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    bindAttrib(programs.advectVel);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, inst.velA.tex);
+    gl.uniform1i(gl.getUniformLocation(programs.advectVel, 'u_velocity'), 0);
+    gl.uniform2f(gl.getUniformLocation(programs.advectVel, 'u_res'), inst.simW, inst.simH);
+    gl.uniform1f(gl.getUniformLocation(programs.advectVel, 'u_dt'), dt);
+    gl.uniform1f(gl.getUniformLocation(programs.advectVel, 'u_time'), time);
+    gl.uniform1f(gl.getUniformLocation(programs.advectVel, 'u_viscosity'), 0.995);
+    // Ambient curl strength — strong enough to keep things flowing
+    // but not so strong it overpowers cursor input
+    gl.uniform1f(gl.getUniformLocation(programs.advectVel, 'u_ambient'), 0.10);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    let tmp = inst.velA; inst.velA = inst.velB; inst.velB = tmp;
+
+    // PASS 2: Cursor force
+    gl.bindFramebuffer(gl.FRAMEBUFFER, inst.velB.fb);
+    gl.viewport(0, 0, inst.simW, inst.simH);
+    gl.useProgram(programs.force);
+    bindAttrib(programs.force);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, inst.velA.tex);
+    gl.uniform1i(gl.getUniformLocation(programs.force, 'u_velocity'), 0);
+    gl.uniform2f(gl.getUniformLocation(programs.force, 'u_cursor'), cursorUVx, cursorUVy);
+    gl.uniform2f(gl.getUniformLocation(programs.force, 'u_cursorVel'), cursorVx, cursorVy);
+    gl.uniform1f(gl.getUniformLocation(programs.force, 'u_cursorActive'), cursorActive);
+    gl.uniform1f(gl.getUniformLocation(programs.force, 'u_dt'), dt);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    tmp = inst.velA; inst.velA = inst.velB; inst.velB = tmp;
+
+    // PASS 3: Project (weakened)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, inst.velB.fb);
+    gl.viewport(0, 0, inst.simW, inst.simH);
+    gl.useProgram(programs.project);
+    bindAttrib(programs.project);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, inst.velA.tex);
+    gl.uniform1i(gl.getUniformLocation(programs.project, 'u_velocity'), 0);
+    gl.uniform2f(gl.getUniformLocation(programs.project, 'u_res'), inst.simW, inst.simH);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    tmp = inst.velA; inst.velA = inst.velB; inst.velB = tmp;
+
+    // PASS 4: Reaction-diffusion + advection (Gray-Scott)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, inst.dyeB.fb);
+    gl.viewport(0, 0, inst.simW, inst.simH);
+    gl.useProgram(programs.advectDye);
+    bindAttrib(programs.advectDye);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, inst.velA.tex);
+    gl.uniform1i(gl.getUniformLocation(programs.advectDye, 'u_velocity'), 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, inst.dyeA.tex);
+    gl.uniform1i(gl.getUniformLocation(programs.advectDye, 'u_dye'), 1);
+    gl.uniform2f(gl.getUniformLocation(programs.advectDye, 'u_res'), inst.simW, inst.simH);
+    gl.uniform1f(gl.getUniformLocation(programs.advectDye, 'u_dt'), dt);
+    gl.uniform1f(gl.getUniformLocation(programs.advectDye, 'u_dyeDecay'), 0.9999);
+    // Per-card Gray-Scott parameters from this instance's config
+    const cfg = inst.rdConfig;
+    gl.uniform1f(gl.getUniformLocation(programs.advectDye, 'u_feed'), cfg.feed);
+    gl.uniform1f(gl.getUniformLocation(programs.advectDye, 'u_kill'), cfg.kill);
+    gl.uniform1f(gl.getUniformLocation(programs.advectDye, 'u_dU'), cfg.dU);
+    gl.uniform1f(gl.getUniformLocation(programs.advectDye, 'u_dV'), cfg.dV);
+    // Cursor uniforms for direct V injection — drops fresh reactant
+    // along the cursor's path, triggering new pattern growth.
+    gl.uniform2f(gl.getUniformLocation(programs.advectDye, 'u_cursor'), cursorUVx, cursorUVy);
+    gl.uniform1f(gl.getUniformLocation(programs.advectDye, 'u_cursorActive'), cursorActive);
+    // Speed magnitude in UV units. Clamped so a tiny twitch doesn't
+    // inject huge amounts; capped at 1.0 so fast flicks don't overdrive.
+    const speedMag = Math.min(Math.sqrt(cursorVx*cursorVx + cursorVy*cursorVy) * 0.4, 1.0);
+    gl.uniform1f(gl.getUniformLocation(programs.advectDye, 'u_cursorSpeed'), speedMag);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    tmp = inst.dyeA; inst.dyeA = inst.dyeB; inst.dyeB = tmp;
+  }
+
+  function drawInstance(inst, dt, time) {
+    if (!inst.initialized) return;
+    const { gl, programs, bindAttrib, canvas } = inst;
+
+    // ---- PROGRESSIVE PRE-WARM ----
+    // If this card still has pre-warm steps left, run several per frame
+    // (so the warm-up completes in a fraction of a second of real time)
+    // but don't render yet. The canvas remains opacity: 0 via CSS until
+    // the pre-warm finishes, then we add `.ready` to fade it in.
+    if (inst.prewarmRemaining > 0) {
+      // Steps per frame for pre-warm. With 600 total steps and 20 per
+      // frame, full warm-up takes ~30 frames = ~500ms before fade-in.
+      // The CSS transition adds another 600ms, so total reveal is ~1.1s.
+      const STEPS_PER_FRAME = 20;
+      const PREWARM_DT = 1 / 60;
+      const stepsToRun = Math.min(STEPS_PER_FRAME, inst.prewarmRemaining);
+      for (let i = 0; i < stepsToRun; i++) {
+        runSimSteps(inst, PREWARM_DT, inst.prewarmTime, /*noCursor=*/ true);
+        inst.prewarmTime += PREWARM_DT;
+      }
+      inst.prewarmRemaining -= stepsToRun;
+
+      // When pre-warm is done, mark canvas ready (triggers CSS fade-in)
+      // and continue to the render pass below so the fade reveals real
+      // simulation state, not a flash of black.
+      if (inst.prewarmRemaining <= 0) {
+        canvas.classList.add('ready');
+      } else {
+        // Still warming up — skip render this frame
+        return;
+      }
+    }
+
+    runSimSteps(inst, dt, time, false);
+
+    // PASS 5: Render
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.useProgram(programs.render);
+    bindAttrib(programs.render);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, inst.dyeA.tex);
+    gl.uniform1i(gl.getUniformLocation(programs.render, 'u_dye'), 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+  }
+
+  function tick() {
+    if (!G.running) return;
+
+    const now = performance.now();
+    const dt = Math.min((now - G.lastFrameT) / 1000, 0.05);
+    G.lastFrameT = now;
+    const time = (now - G.startT) / 1000;
+
+    if (G.mx !== -9999) {
+      const ease = 0.4;
+      G.smx += (G.mx - G.smx) * ease;
+      G.smy += (G.my - G.smy) * ease;
+
+      if (dt > 0.001) {
+        const rawVx = (G.smx - G.pmx) / dt;
+        const rawVy = (G.smy - G.pmy) / dt;
+        G.cursorVx += (rawVx - G.cursorVx) * 0.4;
+        G.cursorVy += (rawVy - G.cursorVy) * 0.4;
+      }
+      G.pmx = G.smx; G.pmy = G.smy;
+    }
+
+    G.cursorVx *= 0.85;
+    G.cursorVy *= 0.85;
+
+    for (const inst of G.instances) drawInstance(inst, dt, time);
+
+    G.raf = requestAnimationFrame(tick);
+  }
+
+  function start() {
+    if (G.running || !G.visible) return;
+    G.running = true;
+    G.lastFrameT = performance.now();
+    tick();
+  }
+
+  function stop() {
+    if (!G.running) return;
+    G.running = false;
+    cancelAnimationFrame(G.raf);
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    G.visible = document.visibilityState === 'visible';
+    if (G.visible) start();
+    else stop();
+  });
+
+  window.addEventListener('mousemove', e => {
+    G.mx = e.clientX + window.scrollX;
+    G.my = e.clientY + window.scrollY;
+    if (G.smx === -9999) {
+      G.smx = G.mx; G.smy = G.my;
+      G.pmx = G.mx; G.pmy = G.my;
+    }
+  });
+
+  const remeasureAll = () => {
+    G.pageW = document.documentElement.clientWidth;
+    G.pageH = Math.max(document.documentElement.clientHeight, document.body.scrollHeight);
+    for (const inst of G.instances) {
+      const rect = inst.el.getBoundingClientRect();
+      inst.cssW = rect.width;
+      inst.cssH = rect.height;
+      inst.offsetX = rect.left + window.scrollX;
+      inst.offsetY = rect.top + window.scrollY;
+    }
+  };
+
+  window.addEventListener('resize', remeasureAll);
+  window.addEventListener('scroll', remeasureAll, { passive: true });
+
+  return {
+    init: (selector = '[data-flow]') => {
+      G.pageW = document.documentElement.clientWidth;
+      G.pageH = Math.max(document.documentElement.clientHeight, document.body.scrollHeight);
+      document.querySelectorAll(selector).forEach(attach);
+      requestAnimationFrame(() => { remeasureAll(); start(); });
+      setTimeout(remeasureAll, 200);
+    }
+  };
+})();
+
+FluidMarble.init();
+</script>
+
+</body>
+</html>

@@ -107,9 +107,15 @@ const isEmbed = hasVideo;
       </div>
       <p class="project-card__meta">
         {p.dateLabel}
-        <span class="sr-only">, </span>
-        <span aria-hidden="true"> · </span>
-        {p.location}
+        {
+          p.location ? (
+            <>
+              <span class="sr-only">, </span>
+              <span aria-hidden="true"> | </span>
+              {p.location}
+            </>
+          ) : null
+        }
       </p>
     </div>
   </a>

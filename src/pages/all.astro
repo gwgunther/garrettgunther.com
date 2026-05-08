@@ -56,7 +56,7 @@ const pageDesc =
   canonicalPath="/all/"
 >
   <SiteHeader currentView="all" />
-  <main id="main">
+  <main id="main" class="all-layout">
     <nav class="all-years wrap" aria-label="Project timeline">
       <div class="all-years__rail">
         <div class="all-years__line" aria-hidden="true"></div>
@@ -97,11 +97,12 @@ const pageDesc =
       </div>
     </nav>
 
-    <div id="work" class="wrap all-work-grid">
-      <h1 class="all-page-title">All projects</h1>
-      <div class="project-grid">
-        {
-          gridItems.map(({ p, year, anchorId, isFirstOfYear, cardId }, i) => {
+    <section class="all-work-scroll" data-all-scroll-host>
+      <div id="work" class="wrap all-work-grid">
+        <h1 class="all-page-title">All projects</h1>
+        <div class="project-grid">
+          {
+            gridItems.map(({ p, year, anchorId, isFirstOfYear, cardId }, i) => {
             const hero = p.gallery[0];
             const vimeoId = p.vimeo[0];
             const youtubeId = !vimeoId ? p.youtube[0] : undefined;
@@ -110,17 +111,23 @@ const pageDesc =
             const hasPhotos = p.gallery.length > 0;
             const workHref = `/work/${p.slug}/`;
             const eagerMedia = i < 3;
+            const vimeoPreviewSrc = vimeoId
+              ? `https://player.vimeo.com/video/${vimeoId}?background=1&autopause=1&muted=1`
+              : undefined;
+            const youtubePreviewSrc = youtubeId
+              ? `https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&mute=1&playsinline=1&controls=0&rel=0`
+              : undefined;
 
-            return (
-              <article
-                class:list={[
-                  'project-card',
-                  'project-card--grid',
-                  { 'project-card--year-start': isFirstOfYear },
-                ]}
-                id={cardId}
-                data-card-id={cardId}
-              >
+              return (
+                <article
+                  class:list={[
+                    'project-card',
+                    'project-card--grid',
+                    { 'project-card--year-start': isFirstOfYear },
+                  ]}
+                  id={cardId}
+                  data-card-id={cardId}
+                >
                 {
                   isFirstOfYear && (
                     <span class="project-year-marker" id={anchorId} aria-label={`${year} projects`}>
@@ -145,7 +152,8 @@ const pageDesc =
                       ) : vimeoId ? (
                         <iframe
                           title={`${p.title} preview`}
-                          src={`https://player.vimeo.com/video/${vimeoId}?background=1&autopause=1&muted=1`}
+                          src={eagerMedia ? vimeoPreviewSrc : undefined}
+                          data-embed-src={vimeoPreviewSrc}
                           allow="autoplay; fullscreen; picture-in-picture"
                           allowfullscreen
                           loading={eagerMedia ? 'eager' : 'lazy'}
@@ -153,7 +161,8 @@ const pageDesc =
                       ) : youtubeId ? (
                         <iframe
                           title={`${p.title} preview`}
-                          src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&mute=1&playsinline=1&controls=0&rel=0`}
+                          src={eagerMedia ? youtubePreviewSrc : undefined}
+                          data-embed-src={youtubePreviewSrc}
                           allow="autoplay; encrypted-media; picture-in-picture"
                           allowfullscreen
                           loading={eagerMedia ? 'eager' : 'lazy'}
@@ -227,27 +236,29 @@ const pageDesc =
                     </p>
                   </div>
                 </a>
-              </article>
-            );
-          })
-        }
+                </article>
+              );
+            })
+          }
+        </div>
       </div>
-    </div>
+    </section>
 
   </main>
 
   <script is:inline>
     if (typeof window !== 'undefined') {
-      const header = document.querySelector('.site-header');
-      const headerHeight = header ? header.getBoundingClientRect().height : 0;
-      const timeline = document.querySelector('.all-years');
+      const scrollHost = document.querySelector('[data-all-scroll-host]');
       const rail = document.querySelector('.all-years__rail');
       const cursor = document.querySelector('.all-years__cursor');
-      const topOffset = headerHeight + (timeline ? timeline.getBoundingClientRect().height : 0) + 12;
+      const topOffset = 12;
+      const dragThresholdPx = 4;
       let isDraggingTimeline = false;
       let pendingDragPercent = null;
       let dragFrame = 0;
       let selectedCard = null;
+      let pointerDownX = 0;
+      let pointerMoved = false;
 
       const markers = Array.from(
         document.querySelectorAll('.all-years__post-marker[data-card-id]')
@@ -310,14 +321,15 @@ const pageDesc =
         }
       }
 
-      function scrollToCard(active, behavior) {
+      function scrollToCard(active, behavior, options = {}) {
         if (!active) return;
-
-        const top = active.el.getBoundingClientRect().top + window.scrollY - topOffset;
-        window.scrollTo({
-          top,
-          behavior,
-        });
+        if (!scrollHost) return;
+        const alignTop = Boolean(options.alignTop);
+        const hostRect = scrollHost.getBoundingClientRect();
+        const cardRect = active.el.getBoundingClientRect();
+        const cardTopWithinHost = scrollHost.scrollTop + (cardRect.top - hostRect.top);
+        const top = Math.max(0, cardTopWithinHost - (alignTop ? 0 : topOffset));
+        scrollHost.scrollTo({ top, behavior });
       }
 
       function dragToPercent(percent) {
@@ -325,19 +337,24 @@ const pageDesc =
 
         const active = closestCardToPercent(percent);
         setSelectedCard(active);
-        scrollToCard(active, 'auto');
+        scrollToCard(active, 'auto', { alignTop: true });
       }
 
       function setActivePost() {
-        if (!cards.length || !cursor || isDraggingTimeline || selectedCard) return;
-
-        const viewportBottom = window.innerHeight || document.documentElement.clientHeight;
+        if (!cards.length || !cursor || isDraggingTimeline) return;
+        if (!scrollHost) return;
+        if (selectedCard) {
+          setSelectedCard(null);
+        }
+        const hostRect = scrollHost.getBoundingClientRect();
+        const viewportBottom = hostRect.bottom;
+        const viewportTop = hostRect.top;
         const visibleCards = cards
           .map((card) => ({
             ...card,
             rect: card.el.getBoundingClientRect(),
           }))
-          .filter(({ rect }) => rect.bottom > topOffset && rect.top < viewportBottom)
+          .filter(({ rect }) => rect.bottom > viewportTop && rect.top < viewportBottom)
           .sort((a, b) => {
             const rowDelta = Math.abs(a.rect.top - b.rect.top);
             if (rowDelta > 8) return a.rect.top - b.rect.top;
@@ -360,15 +377,17 @@ const pageDesc =
           if (!cards.length) return;
           event.preventDefault();
           isDraggingTimeline = true;
+          pointerDownX = event.clientX;
+          pointerMoved = false;
           rail.setPointerCapture(event.pointerId);
-          pendingDragPercent = percentFromPointer(event.clientX);
-          if (!dragFrame) {
-            dragFrame = window.requestAnimationFrame(flushDragFrame);
-          }
         });
 
         rail.addEventListener('pointermove', (event) => {
           if (!isDraggingTimeline) return;
+          if (!pointerMoved && Math.abs(event.clientX - pointerDownX) >= dragThresholdPx) {
+            pointerMoved = true;
+          }
+          if (!pointerMoved) return;
           pendingDragPercent = percentFromPointer(event.clientX);
           if (!dragFrame) {
             dragFrame = window.requestAnimationFrame(flushDragFrame);
@@ -378,16 +397,23 @@ const pageDesc =
         rail.addEventListener('pointerup', (event) => {
           if (!isDraggingTimeline) return;
           isDraggingTimeline = false;
-          if (pendingDragPercent !== null) {
-            const active = closestCardToPercent(pendingDragPercent);
+          const targetPercent = pointerMoved
+            ? pendingDragPercent
+            : percentFromPointer(event.clientX);
+          if (targetPercent !== null) {
+            const active = closestCardToPercent(targetPercent);
             setSelectedCard(active);
-            scrollToCard(active, 'auto');
+            scrollToCard(active, pointerMoved ? 'auto' : 'smooth', { alignTop: true });
           }
+          pendingDragPercent = null;
+          pointerMoved = false;
           rail.releasePointerCapture(event.pointerId);
         });
 
         rail.addEventListener('pointercancel', (event) => {
           isDraggingTimeline = false;
+          pendingDragPercent = null;
+          pointerMoved = false;
           rail.releasePointerCapture(event.pointerId);
         });
 
@@ -404,7 +430,7 @@ const pageDesc =
 
           setActiveCard(active);
           setSelectedCard(active);
-          scrollToCard(active, 'smooth');
+          scrollToCard(active, 'smooth', { alignTop: true });
         });
 
         markers.forEach((marker) => {
@@ -413,14 +439,49 @@ const pageDesc =
             const active = cards.find((card) => card.marker === marker);
             if (!active) return;
             setSelectedCard(active);
-            scrollToCard(active, 'smooth');
+            scrollToCard(active, 'smooth', { alignTop: true });
           });
         });
       }
 
-      window.addEventListener('scroll', setActivePost, { passive: true });
+      if (scrollHost) {
+        scrollHost.addEventListener('scroll', setActivePost, { passive: true });
+      }
       window.addEventListener('resize', setActivePost);
       setActivePost();
+
+      // Lazy-load offscreen iframe previews so above-the-fold cards load first.
+      const lazyEmbeds = Array.from(document.querySelectorAll('iframe[data-embed-src]:not([src])'));
+      if (lazyEmbeds.length) {
+        const loadEmbed = (iframe) => {
+          const embedSrc = iframe.dataset.embedSrc;
+          if (embedSrc && !iframe.getAttribute('src')) {
+            iframe.setAttribute('src', embedSrc);
+          }
+        };
+
+        if ('IntersectionObserver' in window) {
+          const observer = new IntersectionObserver(
+            (entries) => {
+              for (const entry of entries) {
+                if (!entry.isIntersecting) continue;
+                const iframe = entry.target;
+                loadEmbed(iframe);
+                observer.unobserve(iframe);
+              }
+            },
+            { rootMargin: '240px 0px' }
+          );
+
+          for (const iframe of lazyEmbeds) {
+            observer.observe(iframe);
+          }
+        } else {
+          for (const iframe of lazyEmbeds) {
+            loadEmbed(iframe);
+          }
+        }
+      }
     }
   </script>
 </BaseLayout>

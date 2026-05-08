@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mesh Gradient — Fluid Points</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #050a18;
+  }
+
+  .gradient-card {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    cursor: none;
+  }
+
+  .gradient-card canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    opacity: 0;
+    transition: opacity 800ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .gradient-card canvas.ready { opacity: 1; }
+
+  /* Visualize the points (toggle on/off via the .show-points class on body) */
+  .points-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    display: none;
+  }
+  body.show-points .points-overlay { display: block; }
+  .points-overlay .pt {
+    position: absolute;
+    width: 12px; height: 12px;
+    background: #000;
+    transform: translate(-50%, -50%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .gradient-card canvas { display: none; }
+    body { background: linear-gradient(135deg, #050a18, #1a2e60); }
+  }
+</style>
+</head>
+<body>
+
+<div class="gradient-card">
+  <canvas id="mesh"></canvas>
+  <div class="points-overlay" id="points"></div>
+</div>
+
+<!-- ============================================================
+     VERTEX SHADER (passthrough)
+     ============================================================ -->
+<script type="x-shader/x-vertex" id="vert">
+attribute vec2 a_pos;
+varying vec2 v_uv;
+void main() {
+  v_uv = a_pos * 0.5 + 0.5;
+  gl_Position = vec4(a_pos, 0.0, 1.0);
+}
+</script>
+
+<!-- ============================================================
+     FRAGMENT SHADER — INVERSE DISTANCE WEIGHTED MESH GRADIENT
+     For each pixel, compute the color as a weighted blend of all
+     points. Weight for point i = 1 / (distance ^ p). Higher p =
+     each point's influence is more local (sharper transitions).
+     ============================================================ -->
+<script type="x-shader/x-fragment" id="frag">
+precision highp float;
+varying vec2 v_uv;
+uniform vec2 u_res;
+uniform float u_aspect;
+uniform float u_time;
+
+// Up to 18 points. Position in UV (0..1), color in RGB (0..1).
+#define N_POINTS 18
+uniform vec2 u_points[N_POINTS];
+uniform vec3 u_colors[N_POINTS];
+uniform float u_radii[N_POINTS]; // per-point influence radius scalar
+
+uniform float u_power;          // distance falloff exponent (2..6)
+uniform vec3  u_baseColor;      // background tint
+uniform float u_baseStrength;   // 0..1 how much the base shows through
+
+// Wave palette — used in the background ribbon layer
+uniform vec3  u_waveDark;
+uniform vec3  u_waveLight;
+uniform float u_waveStrength;   // overall opacity of the wave layer
+
+float hash21(vec2 p){
+  p = fract(p * vec2(123.34, 456.21));
+  p += dot(p, p + 45.32);
+  return fract(p.x * p.y);
+}
+
+// 2D simplex noise (compact implementation) — used for wave distortion.
+vec3 mod289_3(vec3 x){return x - floor(x*(1.0/289.0))*289.0;}
+vec2 mod289_2(vec2 x){return x - floor(x*(1.0/289.0))*289.0;}
+vec3 permute3(vec3 x){return mod289_3(((x*34.0)+1.0)*x);}
+
+float snoise(vec2 v){
+  const vec4 C = vec4(0.211324865405187, 0.366025403784439,
+                     -0.577350269189626, 0.024390243902439);
+  vec2 i  = floor(v + dot(v, C.yy));
+  vec2 x0 = v -   i + dot(i, C.xx);
+  vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+  vec4 x12 = x0.xyxy + C.xxzz; x12.xy -= i1;
+  i = mod289_2(i);
+  vec3 p = permute3( permute3( i.y + vec3(0.0, i1.y, 1.0))
+                  + i.x + vec3(0.0, i1.x, 1.0));
+  vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+  m = m*m; m = m*m;
+  vec3 x = 2.0 * fract(p * C.www) - 1.0;
+  vec3 h = abs(x) - 0.5;
+  vec3 ox = floor(x + 0.5);
+  vec3 a0 = x - ox;
+  m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
+  vec3 g;
+  g.x  = a0.x  * x0.x  + h.x  * x0.y;
+  g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+  return 130.0 * dot(m, g);
+}
+
+// ============================================================
+// BACKGROUND WAVES
+// Big flowing diagonal ribbons that breathe over time. Built
+// from a domain-warped sin field — we take a sine wave along
+// one axis, distort its input coordinates with noise, and let
+// the noise itself drift slowly. The result reads as soft
+// horizontal folds that ripple and undulate.
+// ============================================================
+float wavePattern(vec2 uv, float time) {
+  // Diagonal axis — slightly tilted so ribbons don't read as flat horizontal
+  vec2 axis = normalize(vec2(0.18, 1.0));
+
+  // Domain warping: distort the sample point with low-frequency noise that
+  // drifts over time. The two layers of noise at different scales prevent
+  // the warping from looking uniform.
+  float warp1 = snoise(vec2(uv.x * 1.2, uv.y * 0.8 + time * 0.05)) * 0.35;
+  float warp2 = snoise(vec2(uv.x * 0.6 + time * 0.03, uv.y * 1.4)) * 0.20;
+  vec2 warped = uv + vec2(warp1, warp2);
+
+  // Sine wave along the diagonal axis — generates the ribbon pattern
+  float w = dot(warped, axis) * 4.5 + time * 0.08;
+  // sin returns -1..1, remap to 0..1 with a soft profile
+  float ribbon = sin(w) * 0.5 + 0.5;
+  // Breathe the contrast — more pronounced ribbons during certain phases
+  float breath = 0.7 + 0.3 * sin(time * 0.15);
+  ribbon = pow(ribbon, mix(1.5, 0.7, breath));
+
+  return ribbon;
+}
+
+void main() {
+  // Aspect-corrected UV for distance math
+  vec2 uv = v_uv;
+  uv.x *= u_aspect;
+
+  // ---- BLOB FIELD (inverse distance weighted) ----
+  vec3 blobSum = vec3(0.0);
+  float weightSum = 0.0;
+
+  for (int i = 0; i < N_POINTS; i++) {
+    vec2 p = u_points[i];
+    p.x *= u_aspect;
+    float d = distance(uv, p);
+    d = max(d, 0.001);
+    float w = u_radii[i] / pow(d, u_power);
+    blobSum += u_colors[i] * w;
+    weightSum += w;
+  }
+  vec3 blobColor = blobSum / weightSum;
+
+  // ---- BACKGROUND WAVES (additive lift) ----
+  // Use the un-aspect-corrected UV so waves stretch naturally with the
+  // viewport rather than being squashed.
+  // We compute the wave VALUE (0..1) and use it to LIFT the navy field
+  // toward a brighter wave-light color. This makes ribbons visible as
+  // soft brightness bands rather than getting lost in mix() blending.
+  float wave = wavePattern(v_uv, u_time);
+
+  // Smooth the ribbons so they look like soft folds rather than stripes
+  wave = smoothstep(0.35, 0.85, wave);
+
+  // Apply as additive brightness in the wave-light color direction.
+  // Areas where ribbons peak get a soft lift toward petrol/sky;
+  // areas in the troughs stay deep navy. Strength decreases where
+  // blobs are already bright (so the field doesn't double-light).
+  vec3 col = blobColor;
+  float blobBrightness = (col.r + col.g + col.b) / 3.0;
+  float waveOpacity = u_waveStrength * (1.0 - blobBrightness * 1.2);
+  waveOpacity = max(waveOpacity, 0.0);
+  col += (u_waveLight - u_waveDark) * wave * waveOpacity;
+
+  // Mix in a touch of base color so the overall tone trends toward navy
+  col = mix(col, u_baseColor, u_baseStrength * 0.15);
+
+  // Procedural grain — TIME-VARYING so it flickers like film/tape grain
+  // rather than reading as a static overlay. Each pixel gets a fresh
+  // noise value every frame. The amplitude is small enough that it
+  // reads as texture, not visible noise dots.
+  // We also modulate by 1 + small low-freq noise so the grain ITSELF
+  // breathes — denser in some regions, sparser in others over time.
+  float grainSeed = floor(u_time * 24.0) / 24.0; // 24 grain "frames" per sec
+  float grain = (hash21(gl_FragCoord.xy + grainSeed) - 0.5) * 0.035;
+  // Vary grain density slightly across the screen for organic feel
+  float grainDensity = 0.7 + 0.3 * snoise(v_uv * 3.0 + u_time * 0.05);
+  col += grain * grainDensity;
+
+  // Soft vignette
+  float vig = smoothstep(1.4, 0.4, length(v_uv - 0.5));
+  col *= mix(0.92, 1.02, vig);
+
+  gl_FragColor = vec4(col, 1.0);
+}
+</script>
+
+<script>
+const MeshGradient = (() => {
+  const VERT = document.getElementById('vert').textContent;
+  const FRAG = document.getElementById('frag').textContent;
+
+  // ============================================================
+  // PALETTE — navy-dominant with petrol/cyan highlights
+  // ============================================================
+  const PALETTE = {
+    deepest:  '#040814',   // anchor — deep navy black
+    navy:     '#0a1530',   // dominant
+    midnight: '#142850',   // mid navy
+    petrol:   '#2d5a8a',   // mid-light blue
+    sky:      '#5a92c8',   // bright accent
+    ice:      '#a8c8e8',   // brightest accent (used sparingly)
+  };
+
+  const hex = h => {
+    const n = parseInt(h.replace('#',''), 16);
+    return [((n>>16)&255)/255, ((n>>8)&255)/255, (n&255)/255];
+  };
+
+  // ============================================================
+  // POINTS — 12 drifting nodes. Most are dark navy variants; a few
+  // accent points create the highlights. Each has:
+  //   - position (UV 0..1)
+  //   - velocity (UV/sec, very slow)
+  //   - color
+  //   - radius (influence multiplier — bigger = stronger reach)
+  // ============================================================
+  function randRange(lo, hi) { return lo + Math.random() * (hi - lo); }
+
+  // Bias: 12 dark, 4 mid-tone, 2 bright. Each point also gets:
+  //   - baseRadius: its "default" size (varied across points for depth)
+  //   - pulsePhase: starting phase of its breathing oscillation
+  //   - pulseSpeed: how fast it pulses (in radians/sec)
+  //   - pulseAmount: how much its radius oscillates (0..1 of baseRadius)
+  // The combination of varied radii + asynchronous pulsing creates a
+  // sense of depth — bigger pulsing blobs feel "closer," tiny stable
+  // ones feel "further away."
+  function makePoints() {
+    const pts = [];
+
+    function pt(colorHex, baseRadius, vRange) {
+      return {
+        x: Math.random(),
+        y: Math.random(),
+        vx: randRange(-vRange, vRange),
+        vy: randRange(-vRange, vRange),
+        color: hex(colorHex),
+        baseRadius,
+        radius: baseRadius, // current value, updated each frame
+        pulsePhase: Math.random() * Math.PI * 2,
+        pulseSpeed: randRange(0.4, 1.2),  // 0.4-1.2 rad/sec, ~5-15s cycle
+        pulseAmount: randRange(0.25, 0.55), // each point pulses ±25-55%
+      };
+    }
+
+    // 2 GIANT navy anchors — dominate huge sweeps of the gradient
+    for (let i = 0; i < 2; i++) {
+      pts.push(pt(PALETTE.deepest, randRange(5.0, 8.0), 0.020));
+    }
+
+    // 3 deep navy points — large supporting forms
+    for (let i = 0; i < 3; i++) {
+      const c = Math.random() < 0.5 ? PALETTE.deepest : PALETTE.navy;
+      pts.push(pt(c, randRange(3.0, 4.5), 0.030));
+    }
+
+    // 2 mid-tone points — petrol/midnight zones
+    for (let i = 0; i < 2; i++) {
+      const c = Math.random() < 0.5 ? PALETTE.midnight : PALETTE.petrol;
+      pts.push(pt(c, randRange(2.5, 3.5), 0.040));
+    }
+
+    // 2 sky points — visible blue accents
+    for (let i = 0; i < 2; i++) {
+      pts.push(pt(PALETTE.sky, randRange(2.0, 3.0), 0.050));
+    }
+
+    // 1 ice point — single bright highlight
+    pts.push(pt(PALETTE.ice, randRange(1.8, 2.5), 0.060));
+
+    return pts;
+  }
+
+  // Cursor is technically a 13th point but it lives separately because
+  // its position comes from mouse input, not the drift physics. We swap
+  // it INTO the points array right before each draw call.
+  const G = {
+    points: makePoints(),
+    cursorPoint: {
+      x: 0.5, y: 0.5,
+      color: hex(PALETTE.deepest),  // dark cursor — pulls shadow with it
+      radius: 0.9,
+    },
+    cursorActive: false,
+
+    canvas: null, gl: null, prog: null,
+    uniforms: {},
+    pointsOverlay: null,
+
+    lastFrameT: performance.now(),
+    running: false,
+    visible: true,
+    raf: 0,
+  };
+
+  // ============================================================
+  // INITIALIZATION
+  // ============================================================
+  function init() {
+    G.canvas = document.getElementById('mesh');
+    G.pointsOverlay = document.getElementById('points');
+    G.gl = G.canvas.getContext('webgl', {
+      antialias: false, premultipliedAlpha: false,
+      powerPreference: 'low-power',
+    });
+    if (!G.gl) {
+      console.warn('WebGL unavailable');
+      return;
+    }
+    const gl = G.gl;
+
+    function compile(type, src) {
+      const s = gl.createShader(type);
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+        console.error(gl.getShaderInfoLog(s));
+      }
+      return s;
+    }
+
+    G.prog = gl.createProgram();
+    gl.attachShader(G.prog, compile(gl.VERTEX_SHADER, VERT));
+    gl.attachShader(G.prog, compile(gl.FRAGMENT_SHADER, FRAG));
+    gl.linkProgram(G.prog);
+
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER,
+      new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]),
+      gl.STATIC_DRAW);
+
+    gl.useProgram(G.prog);
+    const aPos = gl.getAttribLocation(G.prog, 'a_pos');
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+    // Cache uniform locations
+    G.uniforms = {
+      res:           gl.getUniformLocation(G.prog, 'u_res'),
+      aspect:        gl.getUniformLocation(G.prog, 'u_aspect'),
+      time:          gl.getUniformLocation(G.prog, 'u_time'),
+      points:        gl.getUniformLocation(G.prog, 'u_points'),
+      colors:        gl.getUniformLocation(G.prog, 'u_colors'),
+      radii:         gl.getUniformLocation(G.prog, 'u_radii'),
+      power:         gl.getUniformLocation(G.prog, 'u_power'),
+      baseColor:     gl.getUniformLocation(G.prog, 'u_baseColor'),
+      baseStrength:  gl.getUniformLocation(G.prog, 'u_baseStrength'),
+      waveDark:      gl.getUniformLocation(G.prog, 'u_waveDark'),
+      waveLight:     gl.getUniformLocation(G.prog, 'u_waveLight'),
+      waveStrength:  gl.getUniformLocation(G.prog, 'u_waveStrength'),
+    };
+
+    // Static uniforms
+    gl.uniform1f(G.uniforms.power, 3.0);
+    gl.uniform3fv(G.uniforms.baseColor, hex(PALETTE.navy));
+    gl.uniform1f(G.uniforms.baseStrength, 1.0);
+    // Wave colors: dark navy → mid-tone blue, so waves read as soft folds
+    // in the navy field rather than competing for attention.
+    gl.uniform3fv(G.uniforms.waveDark,  hex(PALETTE.deepest));
+    gl.uniform3fv(G.uniforms.waveLight, hex(PALETTE.petrol));
+    // 0.50 = visible soft folds. With additive blending, this is the
+    // peak brightness lift in the wave's bright bands.
+    gl.uniform1f(G.uniforms.waveStrength, 0.50);
+
+    G.startT = performance.now();
+
+    resize();
+    window.addEventListener('resize', resize);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseleave', () => { G.cursorActive = false; });
+    document.addEventListener('visibilitychange', () => {
+      G.visible = document.visibilityState === 'visible';
+      if (G.visible) start(); else stop();
+    });
+
+    // Build the visual point indicators (hidden by default)
+    for (let i = 0; i < G.points.length; i++) {
+      const el = document.createElement('div');
+      el.className = 'pt';
+      G.pointsOverlay.appendChild(el);
+    }
+    const cursorEl = document.createElement('div');
+    cursorEl.className = 'pt';
+    cursorEl.id = 'cursorPt';
+    G.pointsOverlay.appendChild(cursorEl);
+
+    start();
+
+    // Reveal canvas after first frame so the fade-in is graceful
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        G.canvas.classList.add('ready');
+      });
+    });
+  }
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.floor(window.innerWidth * dpr);
+    const h = Math.floor(window.innerHeight * dpr);
+    G.canvas.width = w;
+    G.canvas.height = h;
+    G.aspect = window.innerWidth / window.innerHeight;
+    G.gl.viewport(0, 0, w, h);
+    G.gl.uniform2f(G.uniforms.res, w, h);
+    G.gl.uniform1f(G.uniforms.aspect, G.aspect);
+  }
+
+  function onMouseMove(e) {
+    G.cursorPoint.x = e.clientX / window.innerWidth;
+    G.cursorPoint.y = 1.0 - e.clientY / window.innerHeight; // flip for GL UV
+    G.cursorActive = true;
+  }
+
+  // ============================================================
+  // SIMULATION STEP
+  // Each point's position evolves from:
+  //   1. Its own drift velocity
+  //   2. Repulsion away from the cursor (when active) — radial force
+  //      that falls off with distance, so close points get shoved hard
+  //      and distant points are barely affected
+  //   3. Tiny random walk to keep motion organic
+  // Bounce off edges with a buffer so points can drift slightly off-screen.
+  // ============================================================
+  function update(dt) {
+    // Cursor repulsion parameters
+    const REPEL_RADIUS = 0.30;   // beyond this distance, no force
+    const REPEL_STRENGTH = 0.8;  // peak push speed in UV/sec at zero distance
+
+    for (const pt of G.points) {
+      // ---- Cursor repulsion (when active) ----
+      if (G.cursorActive) {
+        const dx = pt.x - G.cursorPoint.x;
+        // Account for aspect ratio so repulsion is circular on screen, not
+        // an ellipse stretched horizontally on wide displays.
+        const dxScreen = dx * (G.aspect || 1);
+        const dy = pt.y - G.cursorPoint.y;
+        const distScreen = Math.sqrt(dxScreen*dxScreen + dy*dy);
+
+        if (distScreen < REPEL_RADIUS && distScreen > 0.0001) {
+          // Smooth falloff: 1 at the cursor, 0 at REPEL_RADIUS.
+          // Using a quadratic falloff feels natural — strong push very
+          // close, fades quickly with distance.
+          const t = 1.0 - distScreen / REPEL_RADIUS;
+          const force = t * t * REPEL_STRENGTH;
+
+          // Direction: away from cursor, normalized in screen space
+          const nx = dxScreen / distScreen;
+          const ny = dy / distScreen;
+
+          // Apply as an additional velocity contribution this frame.
+          // We add to position directly here (impulse style) rather than
+          // accumulating into vx/vy, so the push happens NOW and doesn't
+          // leave residual velocity that takes time to decay.
+          pt.x += nx * force * dt / (G.aspect || 1); // unscale x back to UV
+          pt.y += ny * force * dt;
+        }
+      }
+
+      // ---- Drift velocity ----
+      pt.x += pt.vx * dt;
+      pt.y += pt.vy * dt;
+
+      // Bounce at edges with buffer
+      if (pt.x < -0.1) { pt.x = -0.1; pt.vx = Math.abs(pt.vx); }
+      if (pt.x >  1.1) { pt.x =  1.1; pt.vx = -Math.abs(pt.vx); }
+      if (pt.y < -0.1) { pt.y = -0.1; pt.vy = Math.abs(pt.vy); }
+      if (pt.y >  1.1) { pt.y =  1.1; pt.vy = -Math.abs(pt.vy); }
+
+      // ---- Pulsing radius (depth illusion) ----
+      // Each point breathes on its own sine wave. Amplitude scaled by
+      // its baseRadius so big blobs swell more in absolute terms,
+      // tiny blobs pulse subtly. The async phases prevent the field
+      // from looking like everything pulses in sync.
+      pt.pulsePhase += pt.pulseSpeed * dt;
+      const pulse = Math.sin(pt.pulsePhase) * pt.pulseAmount;
+      pt.radius = pt.baseRadius * (1.0 + pulse);
+
+      // Tiny random walk on velocity — keeps motion non-mechanical.
+      // Bumped from 0.005 to 0.012 for more energetic wandering.
+      pt.vx += (Math.random() - 0.5) * 0.012 * dt;
+      pt.vy += (Math.random() - 0.5) * 0.012 * dt;
+
+      // Clamp velocity so it doesn't grow unbounded.
+      // Bumped from 0.05 to 0.075 to allow more lively drift.
+      const maxV = 0.075;
+      pt.vx = Math.max(-maxV, Math.min(maxV, pt.vx));
+      pt.vy = Math.max(-maxV, Math.min(maxV, pt.vy));
+    }
+  }
+
+  // ============================================================
+  // RENDER
+  // Pack point positions, colors, and radii into flat arrays for
+  // the shader. The cursor takes the slot of the last point if it's
+  // currently active, otherwise that slot is just another drift point.
+  // ============================================================
+  const positionsBuffer = new Float32Array(18 * 2);
+  const colorsBuffer    = new Float32Array(18 * 3);
+  const radiiBuffer     = new Float32Array(18);
+
+  function draw() {
+    const N = G.points.length;
+    for (let i = 0; i < N; i++) {
+      const p = G.points[i];
+      positionsBuffer[i*2]   = p.x;
+      positionsBuffer[i*2+1] = p.y;
+      colorsBuffer[i*3]      = p.color[0];
+      colorsBuffer[i*3+1]    = p.color[1];
+      colorsBuffer[i*3+2]    = p.color[2];
+      radiiBuffer[i]         = p.radius;
+    }
+
+    // Park any unused middle slots (between the drift points and the
+    // cursor slot) with zero radius so they don't influence the field.
+    const cursorSlot = 17; // last of 18 in the shader
+    for (let i = N; i < cursorSlot; i++) {
+      positionsBuffer[i*2]   = -10;
+      positionsBuffer[i*2+1] = -10;
+      radiiBuffer[i]         = 0.0;
+    }
+
+    // Cursor slot — when not active, also off-screen with zero radius
+    const ci = cursorSlot;
+    if (G.cursorActive) {
+      positionsBuffer[ci*2]   = G.cursorPoint.x;
+      positionsBuffer[ci*2+1] = G.cursorPoint.y;
+      colorsBuffer[ci*3]      = G.cursorPoint.color[0];
+      colorsBuffer[ci*3+1]    = G.cursorPoint.color[1];
+      colorsBuffer[ci*3+2]    = G.cursorPoint.color[2];
+      radiiBuffer[ci]         = G.cursorPoint.radius;
+    } else {
+      positionsBuffer[ci*2]   = -10;
+      positionsBuffer[ci*2+1] = -10;
+      radiiBuffer[ci]         = 0.0;
+    }
+
+    const gl = G.gl;
+    gl.uniform1f(G.uniforms.time, (performance.now() - G.startT) / 1000);
+    gl.uniform2fv(G.uniforms.points, positionsBuffer);
+    gl.uniform3fv(G.uniforms.colors, colorsBuffer);
+    gl.uniform1fv(G.uniforms.radii,  radiiBuffer);
+
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+    // Update visual point overlay (only when toggled visible)
+    if (document.body.classList.contains('show-points')) {
+      const els = G.pointsOverlay.querySelectorAll('.pt');
+      for (let i = 0; i < G.points.length; i++) {
+        const p = G.points[i];
+        els[i].style.left = (p.x * 100) + '%';
+        els[i].style.top  = ((1 - p.y) * 100) + '%';
+      }
+      const cursorEl = document.getElementById('cursorPt');
+      if (cursorEl) {
+        cursorEl.style.left = (G.cursorPoint.x * 100) + '%';
+        cursorEl.style.top  = ((1 - G.cursorPoint.y) * 100) + '%';
+        cursorEl.style.display = G.cursorActive ? 'block' : 'none';
+      }
+    }
+  }
+
+  function tick() {
+    if (!G.running) return;
+    const now = performance.now();
+    const dt = Math.min((now - G.lastFrameT) / 1000, 0.05);
+    G.lastFrameT = now;
+    update(dt);
+    draw();
+    G.raf = requestAnimationFrame(tick);
+  }
+
+  function start() {
+    if (G.running || !G.visible) return;
+    G.running = true;
+    G.lastFrameT = performance.now();
+    tick();
+  }
+
+  function stop() {
+    G.running = false;
+    cancelAnimationFrame(G.raf);
+  }
+
+  // Toggle the point overlay with the 'p' key for debugging
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'p' || e.key === 'P') {
+      document.body.classList.toggle('show-points');
+    }
+  });
+
+  return { init };
+})();
+
+MeshGradient.init();
+</script>
+
+</body>
+</html>

@@ -10,9 +10,18 @@ type Props = {
   ogImage?: string;
   ogType?: string;
   jsonLd?: Record<string, unknown>;
+  darkModeFluidSrc?: string;
 };
 
-const { title, description, canonicalPath, ogImage, ogType = 'website', jsonLd } = Astro.props;
+const {
+  title,
+  description,
+  canonicalPath,
+  ogImage,
+  ogType = 'website',
+  jsonLd,
+  darkModeFluidSrc = '/flow-gradient-full.html',
+} = Astro.props;
 
 const site = Astro.site?.href ?? 'https://garrettgunther.com';
 const canonical = new URL(canonicalPath.replace(/^\//, ''), site).href;
@@ -44,10 +53,20 @@ const fullTitle = title === 'Garrett Gunther' ? title : `${title} · Garrett Gun
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Inter+Tight:ital,wght@0,300;0,400;0,500;1,400&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;1,400&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
     <GoogleAnalytics />
+    <script is:inline>
+      (() => {
+        try {
+          const enabled = localStorage.getItem('gg-dark-mode') === '1';
+          if (enabled) document.documentElement.classList.add('gg-dark-mode');
+        } catch {
+          // no-op: localStorage may be unavailable
+        }
+      })();
+    </script>
     {
       jsonLd ? (
         <script type="application/ld+json" is:inline set:html={JSON.stringify(jsonLd)} />
@@ -56,8 +75,183 @@ const fullTitle = title === 'Garrett Gunther' ? title : `${title} · Garrett Gun
     <title>{fullTitle}</title>
   </head>
   <body>
+    <iframe
+      class="dark-mode-fluid-bg"
+      src={darkModeFluidSrc}
+      title="Dark mode fluid background"
+      loading="eager"
+      tabindex="-1"
+      aria-hidden="true"
+    ></iframe>
     <a class="sr-only" href="#main">Skip to content</a>
     <slot />
     <LightboxModal />
+    <script is:inline>
+      (() => {
+        const root = document.documentElement;
+        const KEY = 'gg-dark-mode';
+
+        const apply = (on) => {
+          root.classList.toggle('gg-dark-mode', on);
+          document.querySelectorAll('[data-dark-mode-toggle]').forEach((btn) => {
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+            btn.setAttribute('aria-label', on ? 'Enable light mode' : 'Enable dark mode');
+            btn.setAttribute('title', on ? 'Switch to light mode' : 'Switch to dark mode');
+            btn.classList.toggle('is-active', on);
+          });
+        };
+
+        const read = () => {
+          try {
+            return localStorage.getItem(KEY) === '1';
+          } catch {
+            return false;
+          }
+        };
+
+        const write = (on) => {
+          try {
+            localStorage.setItem(KEY, on ? '1' : '0');
+          } catch {
+            // no-op
+          }
+        };
+
+        apply(read());
+
+        document.addEventListener('click', (event) => {
+          const target = event.target;
+          if (!(target instanceof Element)) return;
+          const btn = target.closest('[data-dark-mode-toggle]');
+          if (!btn) return;
+          const next = !root.classList.contains('gg-dark-mode');
+          apply(next);
+          write(next);
+        });
+      })();
+    </script>
+    <script is:inline>
+      (() => {
+        const root = document.documentElement;
+        const bgIframe = document.querySelector('.dark-mode-fluid-bg');
+        const toggleIframe = document.querySelector('.dark-mode-toggle__fluid');
+        if (!bgIframe && !toggleIframe) return;
+
+        const dispatchMousemoveToIframe = (iframeEl, x, y) => {
+          if (!iframeEl) return;
+          const rect = iframeEl.getBoundingClientRect();
+          const win = iframeEl.contentWindow;
+          if (!win) return;
+
+          // event.clientX/clientY inside the iframe should be in iframe-local
+          // coordinates, not parent-page coordinates.
+          const xLocal = x - rect.left;
+          const yLocal = y - rect.top;
+
+          win.dispatchEvent(
+            new MouseEvent('mousemove', {
+              clientX: xLocal,
+              clientY: yLocal,
+            }),
+          );
+        };
+
+        const getIframeClientCenter = (iframeEl) => {
+          const rect = iframeEl.getBoundingClientRect();
+          return {
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2,
+          };
+        };
+
+        let bgCenter = bgIframe ? getIframeClientCenter(bgIframe) : { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+        let toggleCenter = toggleIframe ? getIframeClientCenter(toggleIframe) : bgCenter;
+        const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+
+        const recomputeCenters = () => {
+          if (bgIframe) bgCenter = getIframeClientCenter(bgIframe);
+          if (toggleIframe) toggleCenter = getIframeClientCenter(toggleIframe);
+        };
+
+        const dispatchKick = () => {
+          // Keep cursorActive=1 in the fluid while "resting" by sending
+          // a synthetic mousemove on activation.
+          const x = clamp(toggleCenter.x, 0, window.innerWidth);
+          const y = clamp(toggleCenter.y, 0, window.innerHeight);
+          dispatchMousemoveToIframe(bgIframe, x, y);
+          dispatchMousemoveToIframe(toggleIframe, x, y);
+
+          // Second kick slightly offset to introduce cursor velocity.
+          const dx = toggleIframe ? toggleIframe.getBoundingClientRect().width * 0.12 : 10;
+          const dy = toggleIframe ? toggleIframe.getBoundingClientRect().height * 0.08 : 6;
+          const x2 = clamp(x + dx, 0, window.innerWidth);
+          const y2 = clamp(y - dy, 0, window.innerHeight);
+          window.setTimeout(() => {
+            dispatchMousemoveToIframe(bgIframe, x2, y2);
+            dispatchMousemoveToIframe(toggleIframe, x2, y2);
+          }, 180);
+        };
+
+        let lastRealPointerMoveAt = 0;
+        let idleActivityTimer = null;
+        const startIdleActivity = () => {
+          if (idleActivityTimer) return;
+          idleActivityTimer = window.setInterval(() => {
+            if (!root.classList.contains('gg-dark-mode')) return;
+            // If user has moved recently, don't add extra synthetic motion.
+            if (Date.now() - lastRealPointerMoveAt < 1100) return;
+
+            const x = clamp(toggleCenter.x, 0, window.innerWidth);
+            const y = clamp(toggleCenter.y, 0, window.innerHeight);
+            const wiggle = 10;
+            const xW = clamp(x + (Math.random() * 2 - 1) * wiggle, 0, window.innerWidth);
+            const yW = clamp(y + (Math.random() * 2 - 1) * wiggle * 0.7, 0, window.innerHeight);
+            dispatchMousemoveToIframe(bgIframe, xW, yW);
+            dispatchMousemoveToIframe(toggleIframe, xW, yW);
+          }, 2500);
+        };
+
+        const stopIdleActivity = () => {
+          if (!idleActivityTimer) return;
+          window.clearInterval(idleActivityTimer);
+          idleActivityTimer = null;
+        };
+
+        // Relay real mouse movement to both fluid iframes.
+        document.addEventListener(
+          'mousemove',
+          (e) => {
+            lastRealPointerMoveAt = Date.now();
+            const x = e.clientX;
+            const y = e.clientY;
+            if (root.classList.contains('gg-dark-mode')) {
+              dispatchMousemoveToIframe(bgIframe, x, y);
+            }
+            dispatchMousemoveToIframe(toggleIframe, x, y);
+          },
+          { passive: true },
+        );
+
+        recomputeCenters();
+        window.addEventListener('resize', recomputeCenters);
+
+        // Kick now if dark mode is already enabled.
+        if (root.classList.contains('gg-dark-mode')) {
+          dispatchKick();
+          startIdleActivity();
+        }
+
+        // Kick whenever dark mode toggles.
+        const mo = new MutationObserver(() => {
+          if (root.classList.contains('gg-dark-mode')) {
+            dispatchKick();
+            startIdleActivity();
+          } else {
+            stopIdleActivity();
+          }
+        });
+        mo.observe(root, { attributes: true, attributeFilter: ['class'] });
+      })();
+    </script>
   </body>
 </html>

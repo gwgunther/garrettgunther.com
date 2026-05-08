@@ -30,10 +30,16 @@ const showPrevNext =
   projects.length > 1 && Boolean(prevProject && nextProject && prevProject.slug !== nextProject.slug);
 
 const hasHeroVideo = Boolean(
-  project.localVideo || project.vimeo.length > 0 || project.youtube.length > 0
+  project.cloudinaryEmbedUrl ||
+    project.localVideo ||
+    project.vimeo.length > 0 ||
+    project.youtube.length > 0
 );
 const heroStillFile = !hasHeroVideo && project.gallery.length > 0 ? project.gallery[0] : null;
 const galleryRest = heroStillFile ? project.gallery.slice(1) : project.gallery;
+const preVimeoVideoCount =
+  (project.cloudinaryEmbedUrl ? 1 : 0) + (project.localVideo ? 1 : 0);
+const preYoutubeVideoCount = preVimeoVideoCount + project.vimeo.length;
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -108,6 +114,19 @@ const jsonLd = {
         ) : null
       }
       {
+        project.cloudinaryEmbedUrl ? (
+          <div class="project-hero__inner embed">
+            <iframe
+              title={`${project.title} — film`}
+              src={project.cloudinaryEmbedUrl}
+              allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+              allowfullscreen
+              loading="eager"
+            />
+          </div>
+        ) : null
+      }
+      {
         project.localVideo ? (
           <div class="project-hero__inner embed">
             <video controls playsinline preload="metadata" aria-label={`${project.title} — film`}>
@@ -120,11 +139,11 @@ const jsonLd = {
         project.vimeo.map((id, i) => (
           <div class="project-hero__inner embed">
             <iframe
-              title={`${project.title} — video ${i + 1}`}
+              title={`${project.title} — video ${preVimeoVideoCount + i + 1}`}
               src={`https://player.vimeo.com/video/${id}`}
               allow="autoplay; fullscreen; picture-in-picture"
               allowfullscreen
-              loading={i === 0 ? 'eager' : 'lazy'}
+              loading={preVimeoVideoCount === 0 && i === 0 ? 'eager' : 'lazy'}
             />
           </div>
         ))
@@ -133,11 +152,11 @@ const jsonLd = {
         project.youtube.map((id, i) => (
           <div class="project-hero__inner embed">
             <iframe
-              title={`${project.title} — video ${(project.localVideo ? 1 : 0) + project.vimeo.length + i + 1}`}
+              title={`${project.title} — video ${preYoutubeVideoCount + i + 1}`}
               src={`https://www.youtube-nocookie.com/embed/${id}`}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowfullscreen
-              loading={project.vimeo.length === 0 && i === 0 ? 'eager' : 'lazy'}
+              loading={preYoutubeVideoCount === 0 && i === 0 ? 'eager' : 'lazy'}
             />
           </div>
         ))

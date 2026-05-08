@@ -79,6 +79,16 @@ function syncDirectory(sourceDir, targetDir) {
     if (!entry.isFile()) continue;
     const src = path.join(sourceDir, entry.name);
     const dest = path.join(targetDir, entry.name);
+    // Cloudflare Pages rejects any single asset over 25 MiB.
+    if (targetDir === PUBLIC_VIDEO) {
+      const size = fs.statSync(src).size;
+      if (size > VIDEO_MAX_BYTES) {
+        console.warn(
+          `[warning] Skipping ${entry.name} (${(size / 1024 / 1024).toFixed(1)} MiB): Cloudflare Pages max file size is 25 MiB.`,
+        );
+        continue;
+      }
+    }
     fs.copyFileSync(src, dest);
     copied += 1;
   }

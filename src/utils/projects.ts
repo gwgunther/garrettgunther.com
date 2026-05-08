@@ -11,26 +11,37 @@ export type Project = {
   vimeo: string[];
   youtube: string[];
   gallery: string[];
+  /** Cloudinary hosted video embed URL */
+  cloudinaryEmbedUrl?: string;
   /** URL path under site root (e.g. /video/foo.mp4) when using self-hosted MP4 instead of Vimeo */
   localVideo?: string;
+};
+
+/** Cloudinary embed URLs keyed by project slug. */
+const CLOUDINARY_EMBED_BY_SLUG: Record<string, string> = {
+  'winter-sticks':
+    'https://player.cloudinary.com/embed/?cloud_name=dnlcsxwo7&public_id=WinterSticks_30s_emxwft&profile=cld-adaptive-stream',
+  'chubbies-x-kingsford':
+    'https://player.cloudinary.com/embed/?cloud_name=dnlcsxwo7&public_id=chubbies-shorts-tailgate_qqg1as&profile=cld-adaptive-stream',
 };
 
 /** Public URL path after sync-media — disables Vimeo for that slug */
 const LOCAL_VIDEO_BY_SLUG: Record<string, string> = {
   'winter-sticks': '/video/WinterSticks_30s.mp4',
-  'chubbies-x-kingsford': '/video/chubbies-shorts-tailgate.mp4',
 };
 
 export function loadProjects(): Project[] {
   const manifest = mediaManifest as Record<string, string[]>;
-  const hydrated = (projectsJson as Omit<Project, 'gallery' | 'localVideo'>[]).map((p) => {
+  const hydrated = (projectsJson as Omit<Project, 'gallery' | 'cloudinaryEmbedUrl' | 'localVideo'>[]).map((p) => {
+    const cloudinaryEmbedUrl = CLOUDINARY_EMBED_BY_SLUG[p.slug];
     const localVideo = LOCAL_VIDEO_BY_SLUG[p.slug];
     return {
       ...p,
       title: formatTitle(p.slug, p.title),
       dateLabel: formatDateLabel(p.dateLabel),
       location: formatLocation(p.slug, p.location),
-      vimeo: localVideo ? [] : p.vimeo,
+      vimeo: cloudinaryEmbedUrl || localVideo ? [] : p.vimeo,
+      ...(cloudinaryEmbedUrl ? { cloudinaryEmbedUrl } : {}),
       ...(localVideo ? { localVideo } : {}),
       gallery: manifest[p.slug] ?? [],
     };

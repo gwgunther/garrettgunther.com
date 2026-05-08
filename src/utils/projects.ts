@@ -13,6 +13,8 @@ export type Project = {
   gallery: string[];
   /** Cloudinary hosted video embed URL */
   cloudinaryEmbedUrl?: string;
+  /** Direct Cloudinary MP4 URL used for muted autoplay card previews */
+  cloudinaryPreviewVideoUrl?: string;
   /** URL path under site root (e.g. /video/foo.mp4) when using self-hosted MP4 instead of Vimeo */
   localVideo?: string;
 };
@@ -26,14 +28,26 @@ const CLOUDINARY_EMBED_BY_SLUG: Record<string, string> = {
 };
 
 /** Public URL path after sync-media — disables Vimeo for that slug */
-const LOCAL_VIDEO_BY_SLUG: Record<string, string> = {
-  'winter-sticks': '/video/WinterSticks_30s.mp4',
-};
+const LOCAL_VIDEO_BY_SLUG: Record<string, string> = {};
+
+function cloudinaryPreviewVideoUrl(embedUrl: string | undefined): string | undefined {
+  if (!embedUrl) return undefined;
+  try {
+    const url = new URL(embedUrl);
+    const cloudName = url.searchParams.get('cloud_name');
+    const publicId = url.searchParams.get('public_id');
+    if (!cloudName || !publicId) return undefined;
+    return `https://res.cloudinary.com/${cloudName}/video/upload/f_auto,q_auto/${encodeURIComponent(publicId)}.mp4`;
+  } catch {
+    return undefined;
+  }
+}
 
 export function loadProjects(): Project[] {
   const manifest = mediaManifest as Record<string, string[]>;
-  const hydrated = (projectsJson as Omit<Project, 'gallery' | 'cloudinaryEmbedUrl' | 'localVideo'>[]).map((p) => {
+  const hydrated = (projectsJson as Omit<Project, 'gallery' | 'cloudinaryEmbedUrl' | 'cloudinaryPreviewVideoUrl' | 'localVideo'>[]).map((p) => {
     const cloudinaryEmbedUrl = CLOUDINARY_EMBED_BY_SLUG[p.slug];
+    const cloudinaryVideoUrl = cloudinaryPreviewVideoUrl(cloudinaryEmbedUrl);
     const localVideo = LOCAL_VIDEO_BY_SLUG[p.slug];
     return {
       ...p,
@@ -42,6 +56,7 @@ export function loadProjects(): Project[] {
       location: formatLocation(p.slug, p.location),
       vimeo: cloudinaryEmbedUrl || localVideo ? [] : p.vimeo,
       ...(cloudinaryEmbedUrl ? { cloudinaryEmbedUrl } : {}),
+      ...(cloudinaryVideoUrl ? { cloudinaryPreviewVideoUrl: cloudinaryVideoUrl } : {}),
       ...(localVideo ? { localVideo } : {}),
       gallery: manifest[p.slug] ?? [],
     };

@@ -48,6 +48,11 @@ const timelineYears = Array.from(
 
 const pageDesc =
   'Complete portfolio — film, photography, and creative direction by Garrett Gunther.';
+const FORCE_EAGER_VIDEO_SLUGS = new Set([
+  'daniel-busser-pas-loue-ft-kenny-gnius',
+  'maku-hq',
+  'okay-so-picture-this',
+]);
 ---
 
 <BaseLayout
@@ -105,18 +110,19 @@ const pageDesc =
           {
             gridItems.map(({ p, year, anchorId, isFirstOfYear, cardId }, i) => {
             const hero = p.gallery[0];
+            const cloudinaryPreviewVideoSrc = p.cloudinaryPreviewVideoUrl;
             const vimeoId = p.vimeo[0];
             const youtubeId = !vimeoId ? p.youtube[0] : undefined;
             const localVideo = p.localVideo;
-            const hasVideo = Boolean(localVideo || vimeoId || youtubeId);
+            const hasVideo = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || youtubeId);
             const hasPhotos = p.gallery.length > 0;
             const workHref = `/work/${p.slug}/`;
-            const eagerMedia = i < 3;
+            const eagerMedia = i < 3 || FORCE_EAGER_VIDEO_SLUGS.has(p.slug);
             const vimeoPreviewSrc = vimeoId
-              ? `https://player.vimeo.com/video/${vimeoId}?background=1&autopause=1&muted=1`
+              ? `https://player.vimeo.com/video/${vimeoId}?background=1&autopause=1&muted=1&loop=1`
               : undefined;
             const youtubePreviewSrc = youtubeId
-              ? `https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&mute=1&playsinline=1&controls=0&rel=0`
+              ? `https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&playsinline=1&loop=1&playlist=${youtubeId}`
               : undefined;
 
               return (
@@ -137,9 +143,25 @@ const pageDesc =
                   )
                 }
                 {hasVideo ? (
-                  <div class="project-card__thumb project-card__thumb-link project-card__thumb--embed">
+                  <div
+                    class:list={[
+                      'project-card__thumb project-card__thumb-link project-card__thumb--embed',
+                      { 'project-card__thumb--cloudinary': Boolean(cloudinaryPreviewVideoSrc) },
+                    ]}
+                  >
                     {
-                      localVideo ? (
+                      cloudinaryPreviewVideoSrc ? (
+                        <video
+                          muted
+                          loop
+                          autoplay
+                          playsinline
+                          preload={eagerMedia ? 'metadata' : 'none'}
+                          aria-label={`${p.title} preview`}
+                        >
+                          <source src={cloudinaryPreviewVideoSrc} type="video/mp4" />
+                        </video>
+                      ) : localVideo ? (
                         <video
                           muted
                           loop
@@ -160,14 +182,19 @@ const pageDesc =
                           loading={eagerMedia ? 'eager' : 'lazy'}
                         />
                       ) : youtubeId ? (
-                        <iframe
-                          title={`${p.title} preview`}
-                          src={eagerMedia ? youtubePreviewSrc : undefined}
-                          data-embed-src={youtubePreviewSrc}
-                          allow="autoplay; encrypted-media; picture-in-picture"
-                          allowfullscreen
-                          loading={eagerMedia ? 'eager' : 'lazy'}
-                        />
+                        <div class="video-wrapper">
+                          <iframe
+                            class="youtube-preview-embed"
+                            title={`${p.title} preview`}
+                            src={eagerMedia ? youtubePreviewSrc : undefined}
+                            data-embed-src={youtubePreviewSrc}
+                            data-provider="youtube"
+                            allow="autoplay; encrypted-media; picture-in-picture"
+                            allowfullscreen
+                            loading={eagerMedia ? 'eager' : 'lazy'}
+                          />
+                          <div class="video-overlay" aria-hidden="true"></div>
+                        </div>
                       ) : (
                         <span class="project-card__thumb-fallback" aria-hidden="true">
                           Film
@@ -522,4 +549,27 @@ const pageDesc =
 
     }
   </script>
+
+  <style>
+    .video-wrapper {
+      position: absolute;
+      inset: 0;
+    }
+
+    .video-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+    }
+
+    /* Aggressive YouTube-only overscan to push left-edge seam off-canvas. */
+    .youtube-preview-embed {
+      right: auto;
+      top: -1px;
+      left: -6px;
+      width: calc(100% + 12px);
+      height: calc(100% + 2px);
+      clip-path: inset(1px 0 1px 6px);
+    }
+  </style>
 </BaseLayout>

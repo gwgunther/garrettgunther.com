@@ -35,11 +35,14 @@ const hasHeroVideo = Boolean(
     project.vimeo.length > 0 ||
     project.youtube.length > 0
 );
+const cloudinaryVideoSrc = project.cloudinaryPreviewVideoUrl;
 const heroStillFile = !hasHeroVideo && project.gallery.length > 0 ? project.gallery[0] : null;
 const galleryRest = heroStillFile ? project.gallery.slice(1) : project.gallery;
 const preVimeoVideoCount =
   (project.cloudinaryEmbedUrl ? 1 : 0) + (project.localVideo ? 1 : 0);
 const preYoutubeVideoCount = preVimeoVideoCount + project.vimeo.length;
+const buildYoutubeEmbedUrl = (id: string): string =>
+  `https://www.youtube-nocookie.com/embed/${id}?autoplay=0&mute=0&playsinline=1&controls=1&rel=0&modestbranding=1&loop=0&iv_load_policy=3&cc_load_policy=0&fs=0`;
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -115,14 +118,22 @@ const jsonLd = {
       }
       {
         project.cloudinaryEmbedUrl ? (
-          <div class="project-hero__inner embed">
-            <iframe
-              title={`${project.title} — film`}
-              src={project.cloudinaryEmbedUrl}
-              allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-              allowfullscreen
-              loading="eager"
-            />
+          <div class="project-hero__inner embed embed--cloudinary">
+            {
+              cloudinaryVideoSrc ? (
+                <video controls playsinline preload="metadata" aria-label={`${project.title} — film`}>
+                  <source src={cloudinaryVideoSrc} type="video/mp4" />
+                </video>
+              ) : (
+                <iframe
+                  title={`${project.title} — film`}
+                  src={project.cloudinaryEmbedUrl}
+                  allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                  allowfullscreen
+                  loading="eager"
+                />
+              )
+            }
           </div>
         ) : null
       }
@@ -153,7 +164,7 @@ const jsonLd = {
           <div class="project-hero__inner embed">
             <iframe
               title={`${project.title} — video ${preYoutubeVideoCount + i + 1}`}
-              src={`https://www.youtube-nocookie.com/embed/${id}`}
+              src={buildYoutubeEmbedUrl(id)}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowfullscreen
               loading={preYoutubeVideoCount === 0 && i === 0 ? 'eager' : 'lazy'}

@@ -605,7 +605,7 @@ a:hover {
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.17em;
-  line-height: 1.12;
+  line-height: 1.15;
 }
 
 .intro-line__link:hover {
@@ -1737,6 +1737,14 @@ a:hover {
 .project-detail {
   padding-top: var(--space-xl);
   padding-bottom: var(--space-xl);
+}
+
+.gg-dark-mode .project-detail h1,
+.gg-dark-mode .project-detail .meta,
+.gg-dark-mode .project-detail .u-muted,
+.gg-dark-mode .project-detail .detail-nav__prev,
+.gg-dark-mode .project-detail .detail-nav__next {
+  color: rgba(255, 255, 255, 0.96);
 }
 
 .detail-nav--title {

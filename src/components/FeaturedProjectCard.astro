@@ -218,13 +218,13 @@ const isEmbed = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || yo
     const previews = Array.from(document.querySelectorAll('video[data-mobile-autoplay-preview]'));
     for (const preview of previews) {
       preview.addEventListener('click', () => {
-        const thumb = preview.closest('.project-card__thumb');
-        const desktop = thumb?.querySelector('.project-card__home-cloudinary-desktop');
-        if (desktop instanceof HTMLVideoElement) {
-          preview.style.display = 'none';
-          desktop.style.display = 'block';
-          desktop.play().catch(() => {});
-        }
+        // Mutate in-place: the video is already buffered and playing, so
+        // unmuting/adding controls/seeking is instant with no reload.
+        preview.muted = false;
+        preview.loop = false;
+        preview.controls = true;
+        preview.currentTime = 0;
+        preview.play().catch(() => {});
       });
     }
 

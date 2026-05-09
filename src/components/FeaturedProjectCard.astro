@@ -162,15 +162,18 @@ const isEmbed = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || yo
 
 <script>
   if (typeof window !== 'undefined') {
-    const inlineVideos = Array.from(document.querySelectorAll('video[data-home-inline-video]'));
-    for (const video of inlineVideos) {
-      video.addEventListener('click', (event) => {
-        // Native controls still work; this just makes a direct video-surface click play immediately.
-        if (!(event.target instanceof Element) || !event.target.closest('video')) return;
-        if (video.paused) {
-          video.play().catch(() => {});
-        }
-      });
+    // Only add the click-to-play shortcut on mouse devices; on touch devices
+    // the native controls handle play/pause and this handler fights them.
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      const inlineVideos = Array.from(document.querySelectorAll('video[data-home-inline-video]'));
+      for (const video of inlineVideos) {
+        video.addEventListener('click', (event) => {
+          if (!(event.target instanceof Element) || !event.target.closest('video')) return;
+          if (video.paused) {
+            video.play().catch(() => {});
+          }
+        });
+      }
     }
 
     const previews = Array.from(document.querySelectorAll('video[data-mobile-autoplay-preview]'));

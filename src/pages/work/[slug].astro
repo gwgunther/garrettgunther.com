@@ -121,7 +121,7 @@ const jsonLd = {
           <div class="project-hero__inner embed embed--cloudinary">
             {
               cloudinaryVideoSrc ? (
-                <video controls playsinline preload="metadata" aria-label={`${project.title} — film`}>
+                <video controls playsinline preload="metadata" poster={project.cloudinaryThumbnailUrl} aria-label={`${project.title} — film`}>
                   <source src={cloudinaryVideoSrc} type="video/mp4" />
                 </video>
               ) : (

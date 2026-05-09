@@ -15,6 +15,8 @@ export type Project = {
   cloudinaryEmbedUrl?: string;
   /** Direct Cloudinary MP4 URL used for muted autoplay card previews */
   cloudinaryPreviewVideoUrl?: string;
+  /** Cloudinary JPEG thumbnail URL used as video poster */
+  cloudinaryThumbnailUrl?: string;
   /** URL path under site root (e.g. /video/foo.mp4) when using self-hosted MP4 instead of Vimeo */
   localVideo?: string;
 };
@@ -43,11 +45,25 @@ function cloudinaryPreviewVideoUrl(embedUrl: string | undefined): string | undef
   }
 }
 
+function cloudinaryThumbnailUrl(embedUrl: string | undefined): string | undefined {
+  if (!embedUrl) return undefined;
+  try {
+    const url = new URL(embedUrl);
+    const cloudName = url.searchParams.get('cloud_name');
+    const publicId = url.searchParams.get('public_id');
+    if (!cloudName || !publicId) return undefined;
+    return `https://res.cloudinary.com/${cloudName}/video/upload/so_0,f_jpg,q_auto/${encodeURIComponent(publicId)}.jpg`;
+  } catch {
+    return undefined;
+  }
+}
+
 export function loadProjects(): Project[] {
   const manifest = mediaManifest as Record<string, string[]>;
   const hydrated = (projectsJson as Omit<Project, 'gallery' | 'cloudinaryEmbedUrl' | 'cloudinaryPreviewVideoUrl' | 'localVideo'>[]).map((p) => {
     const cloudinaryEmbedUrl = CLOUDINARY_EMBED_BY_SLUG[p.slug];
     const cloudinaryVideoUrl = cloudinaryPreviewVideoUrl(cloudinaryEmbedUrl);
+    const cloudinaryThumbUrl = cloudinaryThumbnailUrl(cloudinaryEmbedUrl);
     const localVideo = LOCAL_VIDEO_BY_SLUG[p.slug];
     return {
       ...p,
@@ -57,6 +73,7 @@ export function loadProjects(): Project[] {
       vimeo: cloudinaryEmbedUrl || localVideo ? [] : p.vimeo,
       ...(cloudinaryEmbedUrl ? { cloudinaryEmbedUrl } : {}),
       ...(cloudinaryVideoUrl ? { cloudinaryPreviewVideoUrl: cloudinaryVideoUrl } : {}),
+      ...(cloudinaryThumbUrl ? { cloudinaryThumbnailUrl: cloudinaryThumbUrl } : {}),
       ...(localVideo ? { localVideo } : {}),
       gallery: manifest[p.slug] ?? [],
     };

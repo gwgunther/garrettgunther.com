@@ -103,7 +103,7 @@ const isEmbed = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || yo
             src={vimeoMobilePreviewUrl}
             allow="autoplay; fullscreen; picture-in-picture"
             loading={isPriority ? 'eager' : 'lazy'}
-            data-thumbnail-target
+
           />
           {thumbnailUrl && (
             <img
@@ -137,7 +137,7 @@ const isEmbed = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || yo
             src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&playsinline=1&loop=1&playlist=${youtubeId}`}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             loading={isPriority ? 'eager' : 'lazy'}
-            data-thumbnail-target
+
           />
           {thumbnailUrl && (
             <img
@@ -252,19 +252,6 @@ const isEmbed = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || yo
         preview.controls = true;
         preview.currentTime = 0;
         preview.play().catch(() => {});
-      });
-    }
-
-    // Fade out thumbnail once the muted preview iframe has loaded and started playing.
-    const previewIframes = Array.from(document.querySelectorAll('iframe[data-thumbnail-target]'));
-    for (const iframe of previewIframes) {
-      iframe.addEventListener('load', () => {
-        const thumb = (iframe as HTMLElement).closest('.project-card__thumb');
-        const thumbnail = thumb?.querySelector('.project-card__embed-thumbnail') as HTMLElement | null;
-        if (thumbnail) {
-          // Brief delay so the player has time to render its first frame.
-          setTimeout(() => { thumbnail.style.opacity = '0'; }, 600);
-        }
       });
     }
 

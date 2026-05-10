@@ -28,6 +28,11 @@ const vimeoMobilePreviewUrl = vimeoId
 const vimeoMobileRealUrl = vimeoId
   ? `https://player.vimeo.com/video/${vimeoId}?autoplay=1`
   : undefined;
+const thumbnailUrl = vimeoId
+  ? `https://vumbnail.com/${vimeoId}.jpg`
+  : youtubeId
+  ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`
+  : undefined;
 const hasVideo = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || youtubeId);
 const hasPhotos = p.gallery.length > 0;
 const isEmbed = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || youtubeId);
@@ -98,7 +103,18 @@ const isEmbed = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || yo
             src={vimeoMobilePreviewUrl}
             allow="autoplay; fullscreen; picture-in-picture"
             loading={isPriority ? 'eager' : 'lazy'}
+            data-thumbnail-target
           />
+          {thumbnailUrl && (
+            <img
+              class="project-card__embed-thumbnail"
+              src={thumbnailUrl}
+              alt=""
+              aria-hidden="true"
+              loading={isPriority ? 'eager' : 'lazy'}
+              decoding="async"
+            />
+          )}
           <div
             class="project-card__mobile-tap-overlay"
             aria-hidden="true"
@@ -121,7 +137,18 @@ const isEmbed = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || yo
             src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&playsinline=1&loop=1&playlist=${youtubeId}`}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             loading={isPriority ? 'eager' : 'lazy'}
+            data-thumbnail-target
           />
+          {thumbnailUrl && (
+            <img
+              class="project-card__embed-thumbnail"
+              src={thumbnailUrl}
+              alt=""
+              aria-hidden="true"
+              loading={isPriority ? 'eager' : 'lazy'}
+              decoding="async"
+            />
+          )}
           <div
             class="project-card__mobile-tap-overlay"
             aria-hidden="true"
@@ -228,6 +255,19 @@ const isEmbed = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || yo
       });
     }
 
+    // Fade out thumbnail once the muted preview iframe has loaded and started playing.
+    const previewIframes = Array.from(document.querySelectorAll('iframe[data-thumbnail-target]'));
+    for (const iframe of previewIframes) {
+      iframe.addEventListener('load', () => {
+        const thumb = (iframe as HTMLElement).closest('.project-card__thumb');
+        const thumbnail = thumb?.querySelector('.project-card__embed-thumbnail') as HTMLElement | null;
+        if (thumbnail) {
+          // Brief delay so the player has time to render its first frame.
+          setTimeout(() => { thumbnail.style.opacity = '0'; }, 600);
+        }
+      });
+    }
+
     // Tap-to-activate for Vimeo/YouTube mobile previews.
     // The overlay captures the first tap, swaps the iframe to the real (controls)
     // src, then removes itself so the player is fully interactive.
@@ -236,6 +276,8 @@ const isEmbed = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || yo
       overlay.addEventListener('click', () => {
         const thumb = overlay.closest('.project-card__thumb');
         const iframe = thumb?.querySelector('.project-card__embed-mobile');
+        const thumbnail = thumb?.querySelector('.project-card__embed-thumbnail') as HTMLElement | null;
+        if (thumbnail) thumbnail.style.display = 'none';
         if (iframe instanceof HTMLIFrameElement) {
           const realSrc = (overlay as HTMLElement).dataset.realSrc;
           if (realSrc) {
@@ -255,8 +297,19 @@ const isEmbed = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || yo
   }
 
   .project-card__embed-mobile,
+  .project-card__embed-thumbnail,
   .project-card__mobile-tap-overlay {
     display: none;
+  }
+
+  .project-card__embed-thumbnail {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1;
+    transition: opacity 0.3s ease;
   }
 
   @media (max-width: 900px) {
@@ -276,11 +329,15 @@ const isEmbed = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || yo
       display: block;
     }
 
+    .project-card__embed-thumbnail {
+      display: block;
+    }
+
     .project-card__mobile-tap-overlay {
       display: block;
       position: absolute;
       inset: 0;
-      z-index: 1;
+      z-index: 2;
       pointer-events: auto;
     }
 

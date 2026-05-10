@@ -103,7 +103,6 @@ const isEmbed = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || yo
             src={vimeoMobilePreviewUrl}
             allow="autoplay; fullscreen; picture-in-picture"
             loading={isPriority ? 'eager' : 'lazy'}
-
           />
           {thumbnailUrl && (
             <img
@@ -134,10 +133,9 @@ const isEmbed = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || yo
           <iframe
             class="project-card__embed-mobile"
             title={`${p.title} preview`}
-            src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&playsinline=1&loop=1&playlist=${youtubeId}`}
+            src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&playsinline=1&loop=1&playlist=${youtubeId}&enablejsapi=1`}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             loading={isPriority ? 'eager' : 'lazy'}
-
           />
           {thumbnailUrl && (
             <img
@@ -255,6 +253,38 @@ const isEmbed = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || yo
       });
     }
 
+    // Build a map of iframe contentWindow → thumbnail so we can match
+    // postMessage events (which carry e.source) to the right card.
+    const mobileIframes = Array.from(document.querySelectorAll<HTMLIFrameElement>('.project-card__embed-mobile'));
+    const iframeToThumbnail = new Map<Window, HTMLElement>();
+    for (const iframe of mobileIframes) {
+      const thumbnail = iframe.closest('.project-card__thumb')
+        ?.querySelector<HTMLElement>('.project-card__embed-thumbnail');
+      if (thumbnail && iframe.contentWindow) {
+        iframeToThumbnail.set(iframe.contentWindow, thumbnail);
+      }
+    }
+
+    const hideThumbnail = (thumbnail: HTMLElement) => {
+      thumbnail.style.opacity = '0';
+    };
+
+    // Vimeo background mode sends { event: 'playProgress' } when frames are rendering.
+    // YouTube with enablejsapi=1 sends { event: 'onStateChange', info: 1 } for playing.
+    window.addEventListener('message', (e) => {
+      if (!e.source) return;
+      const thumbnail = iframeToThumbnail.get(e.source as Window);
+      if (!thumbnail) return;
+      try {
+        const data = JSON.parse(typeof e.data === 'string' ? e.data : JSON.stringify(e.data));
+        const isPlaying =
+          data.event === 'playProgress' ||
+          data.event === 'play' ||
+          (data.event === 'onStateChange' && data.info === 1);
+        if (isPlaying) hideThumbnail(thumbnail);
+      } catch {}
+    });
+
     // Tap-to-activate for Vimeo/YouTube mobile previews.
     // The overlay captures the first tap, swaps the iframe to the real (controls)
     // src, then removes itself so the player is fully interactive.
@@ -263,8 +293,8 @@ const isEmbed = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || yo
       overlay.addEventListener('click', () => {
         const thumb = overlay.closest('.project-card__thumb');
         const iframe = thumb?.querySelector('.project-card__embed-mobile');
-        const thumbnail = thumb?.querySelector('.project-card__embed-thumbnail') as HTMLElement | null;
-        if (thumbnail) thumbnail.style.display = 'none';
+        const thumbnail = thumb?.querySelector<HTMLElement>('.project-card__embed-thumbnail');
+        if (thumbnail) hideThumbnail(thumbnail);
         if (iframe instanceof HTMLIFrameElement) {
           const realSrc = (overlay as HTMLElement).dataset.realSrc;
           if (realSrc) {

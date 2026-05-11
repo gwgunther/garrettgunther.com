@@ -23,7 +23,7 @@ const youtubeMobileRealUrl = youtubeId
   ? `https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&mute=0&playsinline=1&controls=1&rel=0&modestbranding=1&loop=0&iv_load_policy=3&cc_load_policy=0&fs=0`
   : undefined;
 const vimeoMobilePreviewUrl = vimeoId
-  ? `https://player.vimeo.com/video/${vimeoId}?background=1&autoplay=1&autopause=0&muted=1`
+  ? `https://player.vimeo.com/video/${vimeoId}?background=1&autoplay=1&autopause=0&muted=1&api=1`
   : undefined;
 const vimeoMobileRealUrl = vimeoId
   ? `https://player.vimeo.com/video/${vimeoId}?autoplay=1`
@@ -253,6 +253,10 @@ const isEmbed = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || yo
       });
     }
 
+    const hideThumbnail = (thumbnail: HTMLElement) => {
+      thumbnail.style.opacity = '0';
+    };
+
     // Build a map of iframe contentWindow → thumbnail so we can match
     // postMessage events (which carry e.source) to the right card.
     const mobileIframes = Array.from(document.querySelectorAll<HTMLIFrameElement>('.project-card__embed-mobile'));
@@ -260,27 +264,37 @@ const isEmbed = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || yo
     for (const iframe of mobileIframes) {
       const thumbnail = iframe.closest('.project-card__thumb')
         ?.querySelector<HTMLElement>('.project-card__embed-thumbnail');
-      if (thumbnail && iframe.contentWindow) {
+      if (!thumbnail) continue;
+      if (iframe.contentWindow) {
         iframeToThumbnail.set(iframe.contentWindow, thumbnail);
       }
+      // Fallback: fade 3s after the player HTML loads in case postMessage never arrives
+      // (e.g. iOS where cross-frame events can be unreliable).
+      iframe.addEventListener('load', () => {
+        window.setTimeout(() => hideThumbnail(thumbnail), 3000);
+      });
     }
 
-    const hideThumbnail = (thumbnail: HTMLElement) => {
-      thumbnail.style.opacity = '0';
-    };
-
-    // Vimeo background mode sends { event: 'playProgress' } when frames are rendering.
-    // YouTube with enablejsapi=1 sends { event: 'onStateChange', info: 1 } for playing.
+    // Vimeo requires explicit event subscription after the player signals ready.
+    // YouTube with enablejsapi=1 sends onStateChange automatically.
     window.addEventListener('message', (e) => {
       if (!e.source) return;
       const thumbnail = iframeToThumbnail.get(e.source as Window);
       if (!thumbnail) return;
       try {
         const data = JSON.parse(typeof e.data === 'string' ? e.data : JSON.stringify(e.data));
+        // Subscribe to Vimeo playProgress once the player is ready.
+        if (data.event === 'ready') {
+          (e.source as Window).postMessage(
+            JSON.stringify({ method: 'addEventListener', value: 'playProgress' }),
+            '*'
+          );
+        }
         const isPlaying =
           data.event === 'playProgress' ||
           data.event === 'play' ||
-          (data.event === 'onStateChange' && data.info === 1);
+          (data.event === 'onStateChange' && data.info === 1) ||
+          (data.event === 'infoDelivery' && (data.info as any)?.playerState === 1);
         if (isPlaying) hideThumbnail(thumbnail);
       } catch {}
     });

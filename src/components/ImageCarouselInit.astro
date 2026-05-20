@@ -1,0 +1,44 @@
+<script>
+  const CAROUSEL_MS = 580;
+
+  function initImageCarousels() {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) return;
+
+    document.querySelectorAll('[data-image-carousel]').forEach((root) => {
+      if (root.hasAttribute('data-carousel-ready')) return;
+      root.setAttribute('data-carousel-ready', '');
+
+      const layers = Array.from(root.querySelectorAll('[data-carousel-layer]'));
+      if (layers.length < 2) return;
+
+      let index = 0;
+      let timer: ReturnType<typeof setInterval> | null = null;
+
+      const show = (i: number) => {
+        layers.forEach((layer, j) => {
+          const el = layer as HTMLElement;
+          el.style.opacity = j === i ? '1' : '0';
+          el.style.zIndex = j === i ? '1' : '0';
+        });
+      };
+
+      root.addEventListener('mouseenter', () => {
+        timer = window.setInterval(() => {
+          index = (index + 1) % layers.length;
+          show(index);
+        }, CAROUSEL_MS);
+      });
+
+      root.addEventListener('mouseleave', () => {
+        if (timer) window.clearInterval(timer);
+        timer = null;
+        index = 0;
+        show(0);
+      });
+    });
+  }
+
+  initImageCarousels();
+  document.addEventListener('astro:page-load', initImageCarousels);
+</script>

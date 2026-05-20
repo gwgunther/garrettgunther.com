@@ -13,6 +13,9 @@ type Props = {
   jsonLd?: Record<string, unknown>;
   darkModeFluidSrc?: string;
   darkModeMeshBackground?: boolean;
+  /** Stronger cursor ↔ orb interaction on mesh background (home) */
+  meshStrongCursor?: boolean;
+  bodyClass?: string;
 };
 
 const {
@@ -24,6 +27,8 @@ const {
   jsonLd,
   darkModeFluidSrc = '/flow-gradient-full.html',
   darkModeMeshBackground = true,
+  meshStrongCursor = false,
+  bodyClass = '',
 } = Astro.props;
 
 const site = Astro.site?.href ?? 'https://garrettgunther.com';
@@ -77,10 +82,10 @@ const fullTitle = title === 'Garrett Gunther' ? title : `${title} · Garrett Gun
     }
     <title>{fullTitle}</title>
   </head>
-  <body>
+  <body class={bodyClass}>
     {
       darkModeMeshBackground ? (
-        <MeshDarkBackground />
+        <MeshDarkBackground strongCursor={meshStrongCursor} />
       ) : (
         <iframe
           class="dark-mode-fluid-bg"

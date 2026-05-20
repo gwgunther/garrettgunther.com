@@ -2,9 +2,11 @@
 type Props = {
   /** Highlights the matching nav item; omit on home */
   currentView?: 'all' | 'fluid' | 'cities' | 'mesh';
+  /** Home uses bottom floating nav — hide top-level project links */
+  isHome?: boolean;
 };
 
-const { currentView } = Astro.props;
+const { currentView, isHome = false } = Astro.props;
 const isFluidBackdrop = currentView === 'fluid';
 ---
 
@@ -23,45 +25,11 @@ const isFluidBackdrop = currentView === 'fluid';
       <nav aria-label="Site">
         <ul class="site-nav-main">
           {
-            currentView === 'all' ? (
+            !isHome && currentView !== 'all' ? (
               <li>
-                <a href="/">Home</a>
+                <a href="/all/">All projects</a>
               </li>
-            ) : !currentView ? (
-              <>
-                <li>
-                  <a href="/all/">All projects</a>
-                </li>
-              </>
-            ) : currentView === 'cities' ? (
-              <>
-                <li>
-                  <a href="/">Home</a>
-                </li>
-                <li aria-hidden="true">|</li>
-                <li>
-                  <a href="/all/">All projects</a>
-                </li>
-              </>
-            ) : currentView === 'mesh' ? (
-              <>
-                <li>
-                  <a href="/">Home</a>
-                </li>
-                <li>
-                  <a href="/all/">All projects</a>
-                </li>
-              </>
-            ) : (
-              <>
-                <li>
-                  <a href="/">Home</a>
-                </li>
-                <li>
-                  <a href="/all/">All projects</a>
-                </li>
-              </>
-            )
+            ) : null
           }
           <li>
             <button

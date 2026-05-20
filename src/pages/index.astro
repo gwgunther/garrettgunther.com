@@ -2,6 +2,8 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import FeaturedProjectCard from '../components/FeaturedProjectCard.astro';
+import SiteFloatingNav from '../components/SiteFloatingNav.astro';
+import SmoothScroll from '../components/SmoothScroll.astro';
 import { featuredProjects, loadProjects } from '../utils/projects';
 
 const projects = loadProjects();
@@ -27,57 +29,79 @@ const siteJsonLd = {
   description="2x Stanford engineer & former athlete. Video, photo, code. Bad French, worse Flemish."
   canonicalPath="/"
   darkModeMeshBackground={true}
+  meshStrongCursor={true}
   jsonLd={siteJsonLd}
+  bodyClass="page-home"
 >
-  <SiteHeader />
+  <SiteHeader isHome />
   <main id="main" class="home-layout">
-    <section class="home-scroll" data-home-scroll-host>
-    <section class="intro intro--home wrap">
-      <div class="intro-context">
-        <p class="intro__lead">
-          2x Stanford engineer & former athlete. Video, photo, code. Bad French, worse Flemish.
-        </p>
-        <div class="intro-columns">
-          <div class="intro-column intro-column--work">
-            <a class="intro-line__link intro-work-link" href="https://www.vector.tv/">
-              <span class="intro-work-link__num">I</span>
-              <span class="intro-work-link__name">Maku (now Vector)</span>
-            </a>
-            <a class="intro-line__link intro-work-link" href="https://rickhousemedia.com">
-              <span class="intro-work-link__num">II</span>
-              <span class="intro-work-link__name">Rickhouse</span>
-            </a>
-            <a class="intro-line__link intro-work-link" href="https://consigliere.com">
-              <span class="intro-work-link__num">III</span>
-              <span class="intro-work-link__name">Consigliere</span>
-            </a>
-          </div>
-          <div class="intro-column intro-column--social">
-            <a class="intro-line__link" href="https://instagram.com/gwgunther" target="_blank" rel="noopener noreferrer">Instagram ↗</a>
-            <a class="intro-line__link" href="https://www.linkedin.com/in/garrett-gunther-55b1a624/" target="_blank" rel="noopener noreferrer">LinkedIn ↗</a>
+    <section class="home-scroll" data-smooth-scroll-host>
+      <section class="intro intro--home wrap">
+        <div class="intro-context anim-intro anim-intro--1">
+          <p class="intro__lead fluid-text-xl">
+            2x Stanford engineer & former athlete. Video, photo, code.<br />
+            Bad French, worse Flemish.
+          </p>
+          <div class="intro-columns">
+            <div class="intro-column intro-column--work">
+              <a class="intro-line__link intro-work-link link-animated-underline" href="https://www.vector.tv/">
+                <span class="intro-work-link__num">I</span>
+                <span class="intro-work-link__name">Maku (now Vector)</span>
+              </a>
+              <a class="intro-line__link intro-work-link link-animated-underline" href="https://rickhousemedia.com">
+                <span class="intro-work-link__num">II</span>
+                <span class="intro-work-link__name">Rickhouse</span>
+              </a>
+              <a class="intro-line__link intro-work-link link-animated-underline" href="https://consigliere.com">
+                <span class="intro-work-link__num">III</span>
+                <span class="intro-work-link__name">Consigliere</span>
+              </a>
+            </div>
+            <div class="intro-column intro-column--social">
+              <a
+                class="intro-line__link link-animated-underline"
+                href="https://instagram.com/gwgunther"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Instagram ↗
+              </a>
+              <a
+                class="intro-line__link link-animated-underline"
+                href="https://www.linkedin.com/in/garrett-gunther-55b1a624/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                LinkedIn ↗
+              </a>
+            </div>
           </div>
         </div>
-      </div>
-      <h2 class="featured-label">Some Favorites</h2>
-    </section>
 
-    <div id="work" class="wrap home-work">
-      <div class="project-list">
-        {
-          featured.map((p, i) => (
-            <FeaturedProjectCard project={p} isPriority={i < 2} animationIndex={i} />
-          ))
-        }
-      </div>
-    </div>
+        <h2 class="featured-label fluid-text-lg">My Favorites</h2>
+      </section>
 
-      <footer class="home-footer" aria-hidden="true"></footer>
+      <div id="work" class="wrap home-work">
+        <div class="project-list">
+          {
+            featured.map((p, i) => (
+              <FeaturedProjectCard
+                project={p}
+                isPriority={i < 2}
+                animationIndex={i}
+                variant="home"
+              />
+            ))
+          }
+        </div>
+      </div>
     </section>
   </main>
+  <SiteFloatingNav
+    items={[
+      { label: 'Home', href: '/', active: true },
+      { label: 'All projects', href: '/all/' },
+    ]}
+  />
+  <SmoothScroll />
 </BaseLayout>
-
-<style>
-  .home-footer {
-    padding-block: var(--space-xl);
-  }
-</style>

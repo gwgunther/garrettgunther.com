@@ -1,4 +1,5 @@
 ---
+import ImageCarouselInit from './ImageCarouselInit.astro';
 import type { Project } from '../utils/projects';
 
 type Props = {
@@ -6,9 +7,11 @@ type Props = {
   /** Eager-load embeds for first items above the fold */
   isPriority: boolean;
   animationIndex: number;
+  /** Home page: image-only cards get hover carousel */
+  variant?: 'home' | 'default';
 };
 
-const { project: p, isPriority, animationIndex } = Astro.props;
+const { project: p, isPriority, animationIndex, variant = 'default' } = Astro.props;
 
 const hero = p.gallery[0];
 const localVideo = p.localVideo;
@@ -22,6 +25,10 @@ const youtubeDesktopEmbedUrl = youtubeId
 const hasVideo = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || youtubeId);
 const hasPhotos = p.gallery.length > 0;
 const isEmbed = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || youtubeId);
+const isImageOnly = !hasVideo && hasPhotos;
+const carouselImages =
+  variant === 'home' && isImageOnly ? p.gallery.slice(0, Math.min(4, p.gallery.length)) : [];
+const useImageCarousel = carouselImages.length >= 2;
 ---
 
 <article
@@ -34,11 +41,34 @@ const isEmbed = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || yo
       {
         'project-card__thumb--embed': isEmbed,
         'project-card__thumb--cloudinary': Boolean(cloudinaryPreviewVideoSrc),
+        'project-card__thumb--carousel': useImageCarousel,
       },
     ]}
+    {...useImageCarousel ? { 'data-image-carousel': '' } : {}}
   >
     {
-      cloudinaryEmbedUrl && cloudinaryPreviewVideoSrc ? (
+      useImageCarousel ? (
+        carouselImages.map((filename, i) => (
+          <div
+            class="project-card__carousel-layer"
+            style={{
+              opacity: i === 0 ? 1 : 0,
+              zIndex: i === 0 ? 1 : 0,
+            }}
+            data-carousel-layer
+          >
+            <img
+              src={`/media/${p.slug}/${filename}`}
+              alt=""
+              loading={isPriority && i === 0 ? 'eager' : 'lazy'}
+              fetchpriority={isPriority && i === 0 ? 'high' : undefined}
+              decoding="async"
+              width="1200"
+              height="900"
+            />
+          </div>
+        ))
+      ) : cloudinaryEmbedUrl && cloudinaryPreviewVideoSrc ? (
         <>
           <video
             class="project-card__home-cloudinary-desktop"
@@ -109,7 +139,7 @@ const isEmbed = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || yo
   <a href={`/work/${p.slug}/`} class="project-card__grid-link">
     <div class="project-card__grid-copy">
       <div class="project-card__grid-title-row">
-        <h2 class="project-card__grid-title">{p.title}</h2>
+        <h2 class="project-card__grid-title fluid-text-base">{p.title}</h2>
       {
         (hasVideo || hasPhotos) && (
           <span class="project-card__type-icons project-card__type-icons--grid" aria-label={`${p.title} media types`}>
@@ -160,12 +190,13 @@ const isEmbed = Boolean(cloudinaryPreviewVideoSrc || localVideo || vimeoId || yo
   </a>
 </article>
 
+<ImageCarouselInit />
+
 <script>
   if (typeof window !== 'undefined') {
     const inlineVideos = Array.from(document.querySelectorAll('video[data-home-inline-video]'));
     for (const video of inlineVideos) {
       video.addEventListener('click', (event) => {
-        // Native controls still work; this just makes a direct video-surface click play immediately.
         if (!(event.target instanceof Element) || !event.target.closest('video')) return;
         if (video.paused) {
           video.play().catch(() => {});

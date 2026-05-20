@@ -1,5 +1,18 @@
+---
+type Props = {
+  /** Home: larger cursor orb + stronger repel so interaction is easy to see */
+  strongCursor?: boolean;
+};
+
+const { strongCursor = false } = Astro.props;
+---
+
 <div class="mesh-dark-bg" aria-hidden="true">
-  <canvas class="mesh-dark-bg__canvas" data-mesh-dark-canvas></canvas>
+  <canvas
+    class="mesh-dark-bg__canvas"
+    data-mesh-dark-canvas
+    data-mesh-strong-cursor={strongCursor ? '1' : '0'}
+  ></canvas>
 </div>
 
 <style is:global>
@@ -39,6 +52,7 @@
   (() => {
     const canvas = document.querySelector('[data-mesh-dark-canvas]');
     if (!(canvas instanceof HTMLCanvasElement)) return;
+    const strongCursor = canvas.dataset.meshStrongCursor === '1';
     const gl = canvas.getContext('webgl', {
       antialias: false,
       premultipliedAlpha: false,
@@ -107,12 +121,12 @@
 
       float wavePattern(vec2 uv, float time) {
         vec2 axis = normalize(vec2(0.18, 1.0));
-        float warp1 = snoise(vec2(uv.x * 1.2, uv.y * 0.8 + time * 0.05)) * 0.35;
-        float warp2 = snoise(vec2(uv.x * 0.6 + time * 0.03, uv.y * 1.4)) * 0.20;
+        float warp1 = snoise(vec2(uv.x * 1.2, uv.y * 0.8 + time * 0.022)) * 0.28;
+        float warp2 = snoise(vec2(uv.x * 0.6 + time * 0.014, uv.y * 1.4)) * 0.16;
         vec2 warped = uv + vec2(warp1, warp2);
-        float w = dot(warped, axis) * 4.5 + time * 0.30;
+        float w = dot(warped, axis) * 4.5 + time * 0.14;
         float ribbon = sin(w) * 0.5 + 0.5;
-        float breath = 0.7 + 0.3 * sin(time * 0.52);
+        float breath = 0.7 + 0.3 * sin(time * 0.28);
         ribbon = pow(ribbon, mix(1.5, 0.7, breath));
         return ribbon;
       }
@@ -177,33 +191,49 @@
       const pt = (colorHex, baseRadius, vRange) => ({
         x: Math.random(),
         y: Math.random(),
+        rx: Math.random(),
+        ry: Math.random(),
         vx: randRange(-vRange, vRange),
         vy: randRange(-vRange, vRange),
         color: hex(colorHex),
         baseRadius,
         radius: baseRadius,
+        rr: baseRadius,
         pulsePhase: Math.random() * Math.PI * 2,
-        pulseSpeed: randRange(1.6, 3.8),
-        pulseAmount: randRange(0.42, 0.9),
+        pulseSpeed: randRange(0.9, 2.1),
+        pulseAmount: randRange(0.32, 0.72),
       });
 
-      // Bigger radii to create chunkier, more dominant blobs.
-      for (let i = 0; i < 2; i++) pts.push(pt(PALETTE.deepest, randRange(8.5, 12.5), 0.076));
-      for (let i = 0; i < 3; i++) pts.push(pt(Math.random() < 0.5 ? PALETTE.deepest : PALETTE.navy, randRange(6.0, 8.8), 0.09));
-      for (let i = 0; i < 2; i++) pts.push(pt(Math.random() < 0.5 ? PALETTE.midnight : PALETTE.petrol, randRange(6.6, 9.2), 0.11));
-      for (let i = 0; i < 2; i++) pts.push(pt(PALETTE.sky, randRange(6.2, 8.8), 0.13));
-      pts.push(pt(PALETTE.ice, randRange(5.8, 8.0), 0.15));
+      // Slightly chunkier blobs, gentler drift.
+      for (let i = 0; i < 2; i++) pts.push(pt(PALETTE.deepest, randRange(8.5, 12.5), 0.048));
+      for (let i = 0; i < 3; i++) pts.push(pt(Math.random() < 0.5 ? PALETTE.deepest : PALETTE.navy, randRange(6.0, 8.8), 0.058));
+      for (let i = 0; i < 2; i++) pts.push(pt(Math.random() < 0.5 ? PALETTE.midnight : PALETTE.petrol, randRange(6.6, 9.2), 0.068));
+      for (let i = 0; i < 2; i++) pts.push(pt(PALETTE.sky, randRange(6.2, 8.8), 0.078));
+      pts.push(pt(PALETTE.ice, randRange(5.8, 8.0), 0.088));
       return pts;
     };
 
     const G = {
       points: makePoints(),
-      // Match reference behavior: mouse blob should stay dark navy.
-      cursorPoint: { x: 0.5, y: 0.5, color: hex(PALETTE.navy), radius: randRange(2.8, 3.2) },
+      cursorPoint: {
+        x: 0.5,
+        y: 0.5,
+        smoothX: 0.5,
+        smoothY: 0.5,
+        color: hex(strongCursor ? PALETTE.sky : PALETTE.petrol),
+        glowColor: hex(strongCursor ? PALETTE.ice : PALETTE.sky),
+        radius: strongCursor ? 9.2 : randRange(4.2, 5.0),
+        baseRadius: strongCursor ? 9.2 : 4.6,
+        glowRadius: strongCursor ? 14.5 : 7.2,
+        smoothRadius: strongCursor ? 9.2 : 4.6,
+        smoothGlowRadius: strongCursor ? 14.5 : 7.2,
+      },
       cursorActive: false,
+      strongCursor,
       uniforms: {},
       startT: performance.now(),
       lastFrameT: performance.now(),
+      smoothDt: 1 / 60,
       aspect: 1,
       running: true,
       visible: true,
@@ -256,7 +286,17 @@
     gl.uniform1f(G.uniforms.baseStrength, 1.0);
     gl.uniform3fv(G.uniforms.waveDark, hex(PALETTE.deepest));
     gl.uniform3fv(G.uniforms.waveLight, hex(PALETTE.petrol));
-    gl.uniform1f(G.uniforms.waveStrength, 0.5);
+    gl.uniform1f(G.uniforms.waveStrength, 0.38);
+
+    const clampCursorDraw = (x, y) => {
+      // Keep the visible orb inset so it doesn't clip at viewport edges.
+      const marginX = 0.055;
+      const marginY = 0.05;
+      return {
+        x: Math.max(marginX, Math.min(1 - marginX, x)),
+        y: Math.max(marginY, Math.min(1 - marginY, y)),
+      };
+    };
 
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
@@ -276,62 +316,102 @@
       G.cursorActive = true;
     };
 
+    for (const pt of G.points) {
+      pt.rx = pt.x;
+      pt.ry = pt.y;
+      pt.rr = pt.radius;
+    }
+
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const expLerp = (rate, dt) => 1 - Math.pow(1 - rate, dt * 60);
+
     const positionsBuffer = new Float32Array(18 * 2);
     const colorsBuffer = new Float32Array(18 * 3);
     const radiiBuffer = new Float32Array(18);
 
     const update = (dt) => {
-      const REPEL_RADIUS = 0.52;
-      const REPEL_STRENGTH = 2.25;
-      const MOUSE_BOUNCE_DAMPING = 0.9;
-      const BLOB_BOUNCE_DAMPING = 0.94;
+      G.smoothDt = lerp(G.smoothDt, Math.min(dt, 0.032), 0.12);
+      const step = G.smoothDt;
+      const aspect = G.aspect || 1;
+
+      const REPEL_RADIUS = strongCursor ? 0.88 : 0.62;
+      const REPEL_ACCEL = strongCursor ? 4.8 : 2.0;
+      const CURSOR_LERP = expLerp(0.14, step);
+      const RENDER_LERP = expLerp(0.2, step);
+      const RADIUS_RENDER_LERP = expLerp(0.16, step);
+      const DRAG = Math.pow(0.968, step * 60);
+      const BLOB_BOUNCE_DAMPING = 0.82;
+      const maxV = strongCursor ? 0.28 : 0.17;
       const radiusToCollision = (radius) => radius * 0.015;
+
+      if (G.cursorActive) {
+        G.cursorPoint.smoothX = lerp(G.cursorPoint.smoothX, G.cursorPoint.x, CURSOR_LERP);
+        G.cursorPoint.smoothY = lerp(G.cursorPoint.smoothY, G.cursorPoint.y, CURSOR_LERP);
+      }
+
+      if (G.cursorActive && strongCursor) {
+        const t = performance.now() * 0.0022;
+        G.cursorPoint.radius = G.cursorPoint.baseRadius + Math.sin(t) * 0.42;
+        G.cursorPoint.glowRadius = G.cursorPoint.baseRadius * 1.55 + Math.sin(t * 0.85) * 0.65;
+      }
+
+      G.cursorPoint.smoothRadius = lerp(
+        G.cursorPoint.smoothRadius,
+        G.cursorPoint.radius,
+        RADIUS_RENDER_LERP
+      );
+      G.cursorPoint.smoothGlowRadius = lerp(
+        G.cursorPoint.smoothGlowRadius,
+        G.cursorPoint.glowRadius,
+        RADIUS_RENDER_LERP
+      );
+
+      const cursorX = G.cursorActive ? G.cursorPoint.smoothX : G.cursorPoint.x;
+      const cursorY = G.cursorActive ? G.cursorPoint.smoothY : G.cursorPoint.y;
 
       for (const pt of G.points) {
         if (G.cursorActive) {
-          const dx = pt.x - G.cursorPoint.x;
-          const dxScreen = dx * (G.aspect || 1);
-          const dy = pt.y - G.cursorPoint.y;
+          const dx = pt.x - cursorX;
+          const dxScreen = dx * aspect;
+          const dy = pt.y - cursorY;
           const distScreen = Math.sqrt(dxScreen * dxScreen + dy * dy);
           if (distScreen < REPEL_RADIUS && distScreen > 0.0001) {
-            const t = 1 - distScreen / REPEL_RADIUS;
-            const force = t * t * REPEL_STRENGTH;
+            const falloff = 1 - distScreen / REPEL_RADIUS;
+            const force = falloff * falloff * REPEL_ACCEL;
             const nx = dxScreen / distScreen;
             const ny = dy / distScreen;
-            pt.x += (nx * force * dt) / (G.aspect || 1);
-            pt.y += ny * force * dt;
-            // Reflect velocity so interaction reads as bounce, not only shove.
-            const vxScreen = pt.vx * (G.aspect || 1);
-            const vn = vxScreen * nx + pt.vy * ny;
-            if (vn < 0) {
-              const rvxScreen = vxScreen - (1.85 * vn * nx);
-              const rvy = pt.vy - (1.85 * vn * ny);
-              pt.vx = (rvxScreen / (G.aspect || 1)) * MOUSE_BOUNCE_DAMPING;
-              pt.vy = rvy * MOUSE_BOUNCE_DAMPING;
-            }
+            pt.vx += ((nx * force) / aspect) * step;
+            pt.vy += ny * force * step;
           }
         }
 
-        pt.x += pt.vx * dt;
-        pt.y += pt.vy * dt;
+        // Smooth ambient drift — no per-frame random jitter.
+        pt.vx += Math.sin(pt.pulsePhase * 0.65 + pt.y * 2.8) * 0.014 * step;
+        pt.vy += Math.cos(pt.pulsePhase * 0.82 + pt.x * 2.8) * 0.014 * step;
 
-        if (pt.x < -0.1) { pt.x = -0.1; pt.vx = Math.abs(pt.vx); }
-        if (pt.x > 1.1) { pt.x = 1.1; pt.vx = -Math.abs(pt.vx); }
-        if (pt.y < -0.1) { pt.y = -0.1; pt.vy = Math.abs(pt.vy); }
-        if (pt.y > 1.1) { pt.y = 1.1; pt.vy = -Math.abs(pt.vy); }
+        pt.vx *= DRAG;
+        pt.vy *= DRAG;
+        pt.vx = Math.max(-maxV, Math.min(maxV, pt.vx));
+        pt.vy = Math.max(-maxV, Math.min(maxV, pt.vy));
 
-        pt.pulsePhase += pt.pulseSpeed * dt;
+        pt.x += pt.vx * step;
+        pt.y += pt.vy * step;
+
+        if (pt.x < 0.04) { pt.x = 0.04; pt.vx = Math.abs(pt.vx) * 0.55; }
+        if (pt.x > 0.96) { pt.x = 0.96; pt.vx = -Math.abs(pt.vx) * 0.55; }
+        if (pt.y < 0.04) { pt.y = 0.04; pt.vy = Math.abs(pt.vy) * 0.55; }
+        if (pt.y > 0.96) { pt.y = 0.96; pt.vy = -Math.abs(pt.vy) * 0.55; }
+
+        pt.pulsePhase += pt.pulseSpeed * step;
         const pulse = Math.sin(pt.pulsePhase) * pt.pulseAmount;
         pt.radius = pt.baseRadius * (1 + pulse);
 
-        pt.vx += (Math.random() - 0.5) * 0.06 * dt;
-        pt.vy += (Math.random() - 0.5) * 0.06 * dt;
-        const maxV = 0.28;
-        pt.vx = Math.max(-maxV, Math.min(maxV, pt.vx));
-        pt.vy = Math.max(-maxV, Math.min(maxV, pt.vy));
+        pt.rx = lerp(pt.rx, pt.x, RENDER_LERP);
+        pt.ry = lerp(pt.ry, pt.y, RENDER_LERP);
+        pt.rr = lerp(pt.rr, pt.radius, RADIUS_RENDER_LERP);
       }
 
-      // Blob-blob collisions: separate overlaps and reflect along collision normal.
+      // Soft blob-blob separation — partial correction per frame to avoid pops.
       for (let i = 0; i < G.points.length; i++) {
         for (let j = i + 1; j < G.points.length; j++) {
           const a = G.points[i];
@@ -345,19 +425,18 @@
           const nx = dx / dist;
           const ny = dy / dist;
           const overlap = minDist - dist;
+          const sep = overlap * 0.2;
 
-          // Push apart equally.
-          a.x -= nx * overlap * 0.5;
-          a.y -= ny * overlap * 0.5;
-          b.x += nx * overlap * 0.5;
-          b.y += ny * overlap * 0.5;
+          a.x -= nx * sep * 0.5;
+          a.y -= ny * sep * 0.5;
+          b.x += nx * sep * 0.5;
+          b.y += ny * sep * 0.5;
 
-          // Equal-mass elastic impulse with light damping.
           const vaN = a.vx * nx + a.vy * ny;
           const vbN = b.vx * nx + b.vy * ny;
           const relN = vbN - vaN;
           if (relN >= 0) continue;
-          const impulse = -1.8 * relN * 0.5;
+          const impulse = -0.95 * relN * 0.5;
           a.vx -= impulse * nx * BLOB_BOUNCE_DAMPING;
           a.vy -= impulse * ny * BLOB_BOUNCE_DAMPING;
           b.vx += impulse * nx * BLOB_BOUNCE_DAMPING;
@@ -370,30 +449,44 @@
       const N = G.points.length;
       for (let i = 0; i < N; i++) {
         const p = G.points[i];
-        positionsBuffer[i * 2] = p.x;
-        positionsBuffer[i * 2 + 1] = p.y;
+        positionsBuffer[i * 2] = p.rx;
+        positionsBuffer[i * 2 + 1] = p.ry;
         colorsBuffer[i * 3] = p.color[0];
         colorsBuffer[i * 3 + 1] = p.color[1];
         colorsBuffer[i * 3 + 2] = p.color[2];
-        radiiBuffer[i] = p.radius;
+        radiiBuffer[i] = p.rr;
       }
 
       const cursorSlot = 17;
-      for (let i = N; i < cursorSlot; i++) {
+      const cursorGlowSlot = 16;
+      for (let i = N; i < cursorGlowSlot; i++) {
         positionsBuffer[i * 2] = -10;
         positionsBuffer[i * 2 + 1] = -10;
         radiiBuffer[i] = 0;
       }
 
       if (G.cursorActive) {
+        const drawPos = clampCursorDraw(G.cursorPoint.smoothX, G.cursorPoint.smoothY);
+        const glowR = G.cursorPoint.smoothGlowRadius ?? G.cursorPoint.smoothRadius * 1.45;
+        const gi = cursorGlowSlot;
+        positionsBuffer[gi * 2] = drawPos.x;
+        positionsBuffer[gi * 2 + 1] = drawPos.y;
+        colorsBuffer[gi * 3] = G.cursorPoint.glowColor[0];
+        colorsBuffer[gi * 3 + 1] = G.cursorPoint.glowColor[1];
+        colorsBuffer[gi * 3 + 2] = G.cursorPoint.glowColor[2];
+        radiiBuffer[gi] = glowR;
+
         const ci = cursorSlot;
-        positionsBuffer[ci * 2] = G.cursorPoint.x;
-        positionsBuffer[ci * 2 + 1] = G.cursorPoint.y;
+        positionsBuffer[ci * 2] = drawPos.x;
+        positionsBuffer[ci * 2 + 1] = drawPos.y;
         colorsBuffer[ci * 3] = G.cursorPoint.color[0];
         colorsBuffer[ci * 3 + 1] = G.cursorPoint.color[1];
         colorsBuffer[ci * 3 + 2] = G.cursorPoint.color[2];
-        radiiBuffer[ci] = G.cursorPoint.radius;
+        radiiBuffer[ci] = G.cursorPoint.smoothRadius;
       } else {
+        positionsBuffer[cursorGlowSlot * 2] = -10;
+        positionsBuffer[cursorGlowSlot * 2 + 1] = -10;
+        radiiBuffer[cursorGlowSlot] = 0;
         positionsBuffer[cursorSlot * 2] = -10;
         positionsBuffer[cursorSlot * 2 + 1] = -10;
         radiiBuffer[cursorSlot] = 0;

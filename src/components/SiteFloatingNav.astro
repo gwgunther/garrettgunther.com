@@ -1,0 +1,33 @@
+---
+export type FloatingNavItem = {
+  label: string;
+  href: string;
+  active?: boolean;
+};
+
+type Props = {
+  items: FloatingNavItem[];
+};
+
+const { items } = Astro.props;
+---
+
+<nav class="site-floating-nav" aria-label="Primary">
+  <div class="site-floating-nav__pill">
+    <ul class="site-floating-nav__list">
+      {
+        items.map((item) => (
+          <li class:list={['site-floating-nav__item', { 'is-active': item.active }]}>
+            <a
+              class="site-floating-nav__link"
+              href={item.href}
+              aria-current={item.active ? 'page' : undefined}
+            >
+              {item.label}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</nav>

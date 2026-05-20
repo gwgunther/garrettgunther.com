@@ -1,0 +1,30 @@
+---
+/** Placeholder hero reel — swap `src` when ready */
+type Props = {
+  /** Optional MP4 path under /public or full URL */
+  src?: string;
+};
+
+const { src } = Astro.props;
+---
+
+<div class="home-hero-media anim-intro anim-intro--2" aria-label="Featured reel">
+  {
+    src ? (
+      <video
+        class="home-hero-media__video"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="metadata"
+      >
+        <source src={src} type="video/mp4" />
+      </video>
+    ) : (
+      <div class="home-hero-media__placeholder">
+        <span class="home-hero-media__label">Hero reel</span>
+      </div>
+    )
+  }
+</div>

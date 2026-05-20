@@ -89,17 +89,26 @@
         display: grid;
         place-items: center;
         opacity: 0;
+        pointer-events: none;
         transition: opacity 350ms ease;
       }
-      .game__lose.is-visible { opacity: 1; }
-      .game__lose p {
+      .game__lose.is-visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .game__lose a {
         color: #f1f6ff;
         font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
         font-size: clamp(1rem, 2.1vw, 1.7rem);
         letter-spacing: 0.02em;
-        background: transparent;
-        border: 0;
-        padding: 0;
+        text-decoration: none;
+        transition: opacity 200ms ease;
+      }
+      .game__lose a:hover {
+        opacity: 0.72;
+      }
+      .game__lose a em {
+        font-style: italic;
       }
     </style>
   </head>
@@ -111,7 +120,7 @@
           <span class="game__goal-mouth"></span>
         </div>
         <div class="game__lose" id="loseScreen">
-          <p>I lost <em>the game</em></p>
+          <a href="/">I lost <em>the game</em></a>
         </div>
       </div>
     </main>

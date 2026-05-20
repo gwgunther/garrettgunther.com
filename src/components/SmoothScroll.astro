@@ -1,0 +1,107 @@
+---
+/** Lenis smooth scroll — any page with [data-smooth-scroll-host] */
+---
+
+<script>
+  import Lenis from 'lenis';
+
+  type ScrollHost = HTMLElement & { __ggLenis?: Lenis };
+
+  let lenis: Lenis | null = null;
+  let raf = 0;
+  let boundHost: ScrollHost | null = null;
+  let hashScrollHandler: (() => void) | null = null;
+
+  const destroyLenis = () => {
+    if (raf) cancelAnimationFrame(raf);
+    raf = 0;
+    if (hashScrollHandler) {
+      window.removeEventListener('hashchange', hashScrollHandler);
+      hashScrollHandler = null;
+    }
+    if (boundHost) {
+      delete boundHost.__ggLenis;
+      boundHost = null;
+    }
+    lenis?.destroy();
+    lenis = null;
+  };
+
+  const bindAnchorScroll = (wrapper: ScrollHost) => {
+    document.querySelectorAll('.site-floating-nav a[href^="#"]').forEach((anchor) => {
+      anchor.addEventListener('click', (event) => {
+        const href = anchor.getAttribute('href');
+        if (!href || href === '#') return;
+        const target = document.querySelector(href);
+        if (!(target instanceof HTMLElement) || !lenis) return;
+        event.preventDefault();
+        lenis.scrollTo(target, { offset: -12 });
+      });
+    });
+
+    wrapper.querySelectorAll('a[href^="#"][data-lenis-scroll]').forEach((anchor) => {
+      anchor.addEventListener('click', (event) => {
+        const href = anchor.getAttribute('href');
+        if (!href || href === '#') return;
+        const target = document.querySelector(href);
+        if (!(target instanceof HTMLElement) || !lenis) return;
+        event.preventDefault();
+        lenis.scrollTo(target, { offset: -12 });
+      });
+    });
+  };
+
+  const init = () => {
+    const wrapper = document.querySelector('[data-smooth-scroll-host]') as ScrollHost | null;
+    if (!wrapper) {
+      destroyLenis();
+      return;
+    }
+
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) {
+      destroyLenis();
+      return;
+    }
+
+    if (boundHost === wrapper && lenis) return;
+
+    destroyLenis();
+
+    lenis = new Lenis({
+      wrapper,
+      content: wrapper,
+      duration: 1.1,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+      touchMultiplier: 1.2,
+    });
+
+    boundHost = wrapper;
+    wrapper.__ggLenis = lenis;
+
+    const tick = (time: number) => {
+      lenis?.raf(time);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+
+    bindAnchorScroll(wrapper);
+
+    const scrollToHash = () => {
+      const hash = window.location.hash;
+      if (!hash || hash === '#') return;
+      const target = document.querySelector(hash);
+      if (!(target instanceof HTMLElement)) return;
+      lenis?.scrollTo(target, { offset: -12 });
+    };
+
+    scrollToHash();
+    hashScrollHandler = scrollToHash;
+    window.addEventListener('hashchange', hashScrollHandler);
+  };
+
+  init();
+  document.addEventListener('astro:page-load', init);
+  document.addEventListener('astro:before-swap', destroyLenis);
+</script>

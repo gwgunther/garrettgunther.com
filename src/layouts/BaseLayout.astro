@@ -246,6 +246,41 @@ const fullTitle = title === 'Garrett Gunther' ? title : `${title} · Garrett Gun
           { passive: true },
         );
 
+        // Relay touch drags on background to the gradient (mobile dark mode).
+        // Touches that start on interactive content (cards, links, buttons,
+        // video) are ignored so normal tap/scroll behaviour is unaffected.
+        const BG_EXCLUDE = 'a, button, input, select, textarea, video, .project-card';
+        let bgTouchId = null;
+
+        document.addEventListener('touchstart', (e) => {
+          if (!root.classList.contains('gg-dark-mode')) return;
+          if (bgTouchId !== null) return;
+          const t = e.changedTouches[0];
+          if ((t.target instanceof Element) && t.target.closest(BG_EXCLUDE)) return;
+          bgTouchId = t.identifier;
+          dispatchMousemoveToIframe(bgIframe, t.clientX, t.clientY);
+          lastRealPointerMoveAt = Date.now();
+        }, { passive: true });
+
+        document.addEventListener('touchmove', (e) => {
+          if (bgTouchId === null || !root.classList.contains('gg-dark-mode')) return;
+          for (const t of e.changedTouches) {
+            if (t.identifier === bgTouchId) {
+              dispatchMousemoveToIframe(bgIframe, t.clientX, t.clientY);
+              lastRealPointerMoveAt = Date.now();
+              break;
+            }
+          }
+        }, { passive: true });
+
+        const endBgTouch = (e) => {
+          for (const t of e.changedTouches) {
+            if (t.identifier === bgTouchId) { bgTouchId = null; break; }
+          }
+        };
+        document.addEventListener('touchend', endBgTouch, { passive: true });
+        document.addEventListener('touchcancel', endBgTouch, { passive: true });
+
         recomputeCenters();
         window.addEventListener('resize', recomputeCenters);
 

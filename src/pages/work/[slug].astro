@@ -67,7 +67,9 @@ const jsonLd = {
   jsonLd={jsonLd}
 >
   <SiteHeader />
-  <main id="main" class="wrap project-detail">
+  <main id="main" class="detail-layout">
+  <div class="detail-scroll">
+  <div class="wrap project-detail">
     <header class="project-detail__intro">
       {
         showPrevNext ? (
@@ -121,7 +123,7 @@ const jsonLd = {
           <div class="project-hero__inner embed embed--cloudinary">
             {
               cloudinaryVideoSrc ? (
-                <video controls playsinline preload="metadata" aria-label={`${project.title} — film`}>
+                <video controls playsinline preload="metadata" poster={project.cloudinaryThumbnailUrl} aria-label={`${project.title} — film`}>
                   <source src={cloudinaryVideoSrc} type="video/mp4" />
                 </video>
               ) : (
@@ -218,5 +220,7 @@ const jsonLd = {
         </nav>
       ) : null
     }
+  </div>
+  </div>
   </main>
 </BaseLayout>

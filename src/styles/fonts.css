@@ -1,40 +1,10 @@
 /**
- * Self-hosted Fontshare faces.
- * Source: _REFERENCES/Erode_Complete (Indian Type Foundry / Fontshare FFL)
- * Files: /public/fonts/erode/*.woff2
+ * Self-hosted Fontshare faces (Indian Type Foundry / Fontshare FFL).
+ * Sources: _REFERENCES/Erode_Complete, _REFERENCES/Switzer_Complete
+ * Served from: /public/fonts/{erode,switzer}/*.woff2
  */
 
-@font-face {
-  font-family: 'Erode';
-  src: url('/fonts/erode/Erode-Light.woff2') format('woff2');
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Erode';
-  src: url('/fonts/erode/Erode-LightItalic.woff2') format('woff2');
-  font-weight: 300;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Erode';
-  src: url('/fonts/erode/Erode-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Erode';
-  src: url('/fonts/erode/Erode-Italic.woff2') format('woff2');
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-}
+/* --- Erode (brand + titles) --------------------------------------------- */
 
 @font-face {
   font-family: 'Erode';
@@ -46,8 +16,74 @@
 
 @font-face {
   font-family: 'Erode';
-  src: url('/fonts/erode/Erode-MediumItalic.woff2') format('woff2');
+  src: url('/fonts/erode/Erode-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Erode';
+  src: url('/fonts/erode/Erode-BoldItalic.woff2') format('woff2');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* --- Switzer (body / UI) ------------------------------------------------ */
+
+@font-face {
+  font-family: 'Switzer';
+  src: url('/fonts/switzer/Switzer-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Switzer';
+  src: url('/fonts/switzer/Switzer-Italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Switzer';
+  src: url('/fonts/switzer/Switzer-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Switzer';
+  src: url('/fonts/switzer/Switzer-MediumItalic.woff2') format('woff2');
   font-weight: 500;
   font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Switzer';
+  src: url('/fonts/switzer/Switzer-Semibold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Switzer';
+  src: url('/fonts/switzer/Switzer-SemiboldItalic.woff2') format('woff2');
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Switzer';
+  src: url('/fonts/switzer/Switzer-Black.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
   font-display: swap;
 }

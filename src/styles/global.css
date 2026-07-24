@@ -4,23 +4,24 @@
   --bg: #f2f1ee;
   --bg-rgb: 242, 241, 238;
   --bg-elevated: #fafaf8;
-  --text: #1c1b19;
-  --text-muted: #6e6963;
+  --text: #1b324f;
+  --text-muted: rgba(27, 50, 79, 0.62);
   --accent: #1b324f;
   --accent-soft: rgba(27, 50, 79, 0.12);
   --accent-rgb: 27, 50, 79;
-  --border: rgba(28, 27, 25, 0.1);
+  --border: rgba(27, 50, 79, 0.12);
+  --font-brand: 'Erode', Georgia, 'Times New Roman', serif;
   --font-display: 'Switzer', 'Helvetica Neue', Arial, sans-serif;
-  --font-ui: 'Erode', Georgia, 'Times New Roman', serif;
+  --font-ui: 'Switzer', 'Helvetica Neue', Arial, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-  --type-body-size: 0.9rem;
+  --type-body-size: 0.95rem;
   --type-body-tracking: 0.02em;
   --type-fluid-xl: clamp(0.95rem, 0.35vw + 0.82rem, 1.15rem);
   --type-fluid-lg: clamp(0.82rem, 0.2vw + 0.74rem, 0.95rem);
   --type-fluid-base: clamp(1.35rem, 1.8vw + 0.95rem, 1.9rem);
   --type-fluid-sm: clamp(0.72rem, 0.15vw + 0.66rem, 0.82rem);
-  --type-label-size: 0.68rem;
-  --type-label-tracking: 0.17em;
+  --type-label-size: 0.72rem;
+  --type-label-tracking: 0.14em;
   --type-label-weight: 500;
   --space-xs: 0.35rem;
   --space-sm: 0.75rem;
@@ -45,6 +46,8 @@ html {
   font-size: 85%;
   scroll-behavior: smooth;
   background: var(--bg);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -66,7 +69,7 @@ body {
   min-height: 100vh;
   padding-top: calc(var(--space-md) + var(--header-height));
   font-family: var(--font-ui);
-  font-weight: 300;
+  font-weight: 400;
   font-size: 1rem;
   line-height: 1.55;
   color: var(--text);
@@ -208,8 +211,8 @@ a:hover {
 
 .site-title {
   margin: 0;
-  font-family: var(--font-display);
-  font-weight: 300;
+  font-family: var(--font-brand);
+  font-weight: 500;
   font-size: clamp(1.75rem, 4vw, 2.35rem);
   letter-spacing: -0.02em;
   line-height: 1.1;
@@ -217,7 +220,7 @@ a:hover {
 
 .site-title em {
   font-style: italic;
-  font-weight: 400;
+  font-weight: 700;
 }
 
 .site-title a {
@@ -270,11 +273,18 @@ a:hover {
 .featured-label,
 .all-page-title {
   font-family: var(--font-display);
-  font-weight: 300;
-  font-size: clamp(1.15rem, 2.2vw, 1.35rem);
+  font-weight: 900;
+  font-size: clamp(1.75rem, 3.4vw, 2.25rem);
   letter-spacing: -0.02em;
   text-transform: none;
   line-height: 1.15;
+}
+
+.featured-label.fluid-text-lg,
+.featured-label.fluid-text-xl,
+.all-page-title.fluid-text-lg,
+.all-page-title.fluid-text-xl {
+  font-size: clamp(1.75rem, 3.4vw, 2.25rem);
 }
 
 .site-nav-main a {
@@ -524,7 +534,7 @@ a:hover {
 
 .featured-label {
   margin: 0 0 var(--space-md);
-  color: #000;
+  color: var(--text);
   border-bottom: 1px solid var(--border);
   padding-bottom: var(--space-sm);
 }
@@ -560,7 +570,12 @@ a:hover {
   font-size: var(--type-body-size);
   letter-spacing: var(--type-body-tracking);
   line-height: 1.45;
-  color: #000;
+  color: var(--text);
+}
+
+.intro__lead.fluid-text-xl {
+  /* Keep lead on the body token — don't let fluid-text-xl override by viewport. */
+  font-size: var(--type-body-size);
 }
 
 
@@ -573,7 +588,7 @@ a:hover {
 }
 
 .intro-columns {
-  margin-top: var(--space-sm);
+  margin-top: var(--space-lg);
   width: 100%;
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -632,10 +647,10 @@ a:hover {
   font-family: var(--font-mono);
   color: var(--accent);
   text-decoration: none;
-  font-size: 0.68rem;
+  font-size: var(--type-label-size);
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.17em;
+  letter-spacing: var(--type-label-tracking);
   line-height: 1.15;
 }
 
@@ -848,7 +863,7 @@ a:hover {
 
 .all-page-title {
   margin: 0 0 var(--space-md);
-  color: #000;
+  color: var(--text);
   border-bottom: 1px solid var(--border);
   padding-bottom: var(--space-sm);
 }
@@ -1098,7 +1113,7 @@ a:hover {
 }
 
 .all-years__post-marker.is-selected::before {
-  border-left-color: #000;
+  border-left-color: var(--text);
 }
 
 .gg-dark-mode .all-years__post-marker.is-selected::before {
@@ -1229,8 +1244,8 @@ a:hover {
 .project-card__copy h2 {
   margin: 0;
   font-family: var(--font-display);
-  font-weight: 300;
-  font-size: clamp(1.45rem, 2.5vw, 1.9rem);
+  font-weight: 900;
+  font-size: clamp(0.95rem, 1.2vw, 1.1rem);
   letter-spacing: -0.02em;
   line-height: 1.15;
 }
@@ -1286,7 +1301,7 @@ a:hover {
   margin: 0;
   max-width: 36rem;
   font-size: var(--type-body-size);
-  color: #000;
+  color: var(--text);
   letter-spacing: var(--type-body-tracking);
 }
 
@@ -1655,12 +1670,23 @@ a:hover {
 .project-card__grid-title {
   margin: 0;
   font-family: var(--font-display);
-  font-weight: 300;
-  font-size: 1.15rem;
+  font-weight: 900;
+  font-size: 0.88rem;
   letter-spacing: -0.02em;
   line-height: 1.2;
   color: var(--text);
   transition: color 0.32s ease, text-shadow 0.32s ease;
+}
+
+.project-card--home .project-card__grid-title {
+  font-size: clamp(1rem, 1.3vw, 1.12rem);
+}
+
+.project-card__grid-title.fluid-text-base,
+.project-card__grid-title.fluid-text-lg,
+.project-card__copy h2.fluid-text-base,
+.project-card__copy h2.fluid-text-lg {
+  font-size: inherit;
 }
 
 .project-card__type-icons--grid {
@@ -1808,7 +1834,7 @@ a:hover {
 .project-detail h1 {
   margin: 0 0 var(--space-sm);
   font-family: var(--font-display);
-  font-weight: 300;
+  font-weight: 900;
   font-size: clamp(2rem, 5vw, 3rem);
   letter-spacing: -0.02em;
   line-height: 1.08;
@@ -2018,7 +2044,7 @@ a:hover {
 
 .not-found h1 {
   font-family: var(--font-display);
-  font-weight: 300;
+  font-weight: 900;
   font-size: clamp(2rem, 6vw, 3.5rem);
   letter-spacing: -0.02em;
   margin-bottom: var(--space-md);

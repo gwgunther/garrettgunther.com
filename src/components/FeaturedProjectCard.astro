@@ -203,7 +203,7 @@ const useImageCarousel = carouselImages.length >= 2;
   <a href={`/work/${p.slug}/`} class="project-card__grid-link">
     <div class="project-card__grid-copy">
       <div class="project-card__grid-title-row">
-        <h2 class="project-card__grid-title fluid-text-base">{p.title}</h2>
+        <h2 class="project-card__grid-title">{p.title}</h2>
       {
         (hasVideo || hasPhotos) && (
           <span class="project-card__type-icons project-card__type-icons--grid" aria-label={`${p.title} media types`}>

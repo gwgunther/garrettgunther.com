@@ -1245,7 +1245,7 @@ a:hover {
   margin: 0;
   font-family: var(--font-display);
   font-weight: 900;
-  font-size: clamp(0.95rem, 1.2vw, 1.1rem);
+  font-size: clamp(1.1rem, 1.5vw, 1.3rem);
   letter-spacing: -0.02em;
   line-height: 1.15;
 }
@@ -1546,6 +1546,7 @@ a:hover {
 .project-list .project-card--home .project-card__thumb--embed video,
 .project-list .project-card--home .project-card__thumb--cloudinary video {
   pointer-events: auto;
+  cursor: pointer;
 }
 
 .project-card__thumb {
@@ -1677,7 +1678,7 @@ a:hover {
   margin: 0;
   font-family: var(--font-display);
   font-weight: 900;
-  font-size: 0.88rem;
+  font-size: 1rem;
   letter-spacing: -0.02em;
   line-height: 1.2;
   color: var(--text);
@@ -1685,7 +1686,7 @@ a:hover {
 }
 
 .project-card--home .project-card__grid-title {
-  font-size: clamp(1rem, 1.3vw, 1.12rem);
+  font-size: clamp(1.15rem, 1.6vw, 1.35rem);
 }
 
 .project-card__grid-title.fluid-text-base,

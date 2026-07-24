@@ -258,19 +258,38 @@ const useImageCarousel = carouselImages.length >= 2;
 
 <script>
   if (typeof window !== 'undefined') {
-    // Only add the click-to-play shortcut on mouse devices; on touch devices
-    // the native controls handle play/pause and this handler fights them.
-    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-      const inlineVideos = Array.from(document.querySelectorAll('video[data-home-inline-video]'));
-      for (const video of inlineVideos) {
-        video.addEventListener('click', (event) => {
-          if (!(event.target instanceof Element) || !event.target.closest('video')) return;
-          if (video.paused) {
-            video.play().catch(() => {});
-          }
-        });
-      }
-    }
+    const CONTROLS_HIT_ZONE_PX = 52;
+
+    const bindFrameClickToggle = (video: HTMLVideoElement) => {
+      if (video.dataset.frameClickBound === '1') return;
+      video.dataset.frameClickBound = '1';
+
+      video.addEventListener('click', (event) => {
+        // Leave native control-bar clicks alone (play, scrub, volume, etc.).
+        const rect = video.getBoundingClientRect();
+        const fromBottom = rect.bottom - event.clientY;
+        if (fromBottom <= CONTROLS_HIT_ZONE_PX) return;
+
+        event.preventDefault();
+        if (video.paused) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      });
+    };
+
+    const bindHomeInlineVideos = () => {
+      // Mouse/trackpad: click the frame to play/pause.
+      // Touch devices rely on native controls (custom handlers fight them).
+      if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+      document
+        .querySelectorAll<HTMLVideoElement>('video[data-home-inline-video]')
+        .forEach(bindFrameClickToggle);
+    };
+
+    bindHomeInlineVideos();
+    document.addEventListener('astro:page-load', bindHomeInlineVideos);
 
     const previews = Array.from(document.querySelectorAll('video[data-mobile-autoplay-preview]'));
     for (const preview of previews) {

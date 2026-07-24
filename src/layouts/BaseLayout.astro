@@ -35,7 +35,10 @@ const site = Astro.site?.href ?? 'https://garrettgunther.com';
 const canonical = new URL(canonicalPath.replace(/^\//, ''), site).href;
 const defaultOg = `${site}favicon.png`;
 const og = ogImage ? new URL(ogImage.replace(/^\//, ''), site).href : defaultOg;
-const fullTitle = title === 'Garrett Gunther' ? title : `${title} · Garrett Gunther`;
+const fullTitle =
+  title === 'Garrett Gunther' || title.includes('Garrett Gunther')
+    ? title
+    : `${title} · Garrett Gunther`;
 ---
 
 <!doctype html>

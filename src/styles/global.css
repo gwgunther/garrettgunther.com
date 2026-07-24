@@ -1553,7 +1553,7 @@ a:hover {
   position: relative;
   aspect-ratio: 4 / 3;
   overflow: hidden;
-  background: var(--bg);
+  background: transparent;
   border: 0;
   isolation: isolate;
 }
@@ -1561,6 +1561,7 @@ a:hover {
 /* All-work grid: 16×9 matches film embeds; photos use object-fit contain (full frame). */
 .project-card--grid .project-card__thumb {
   aspect-ratio: 16 / 9;
+  background: transparent;
 }
 
 .project-card__thumb-link {

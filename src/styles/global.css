@@ -1,3 +1,5 @@
+@import './fonts.css';
+
 :root {
   --bg: #f2f1ee;
   --bg-rgb: 242, 241, 238;
@@ -8,8 +10,8 @@
   --accent-soft: rgba(27, 50, 79, 0.12);
   --accent-rgb: 27, 50, 79;
   --border: rgba(28, 27, 25, 0.1);
-  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
-  --font-ui: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Switzer', 'Helvetica Neue', Arial, sans-serif;
+  --font-ui: 'Erode', Georgia, 'Times New Roman', serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --type-body-size: 0.9rem;
   --type-body-tracking: 0.02em;

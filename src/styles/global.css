@@ -1542,6 +1542,12 @@ a:hover {
   pointer-events: none;
 }
 
+/* Home featured cards: allow play/pause on native video controls. */
+.project-list .project-card--home .project-card__thumb--embed video,
+.project-list .project-card--home .project-card__thumb--cloudinary video {
+  pointer-events: auto;
+}
+
 .project-card__thumb {
   position: relative;
   aspect-ratio: 4 / 3;
@@ -1865,7 +1871,7 @@ a:hover {
 
 .detail-nav--title {
   margin-top: 0;
-  margin-bottom: 0.35rem;
+  margin-bottom: var(--space-md);
 }
 
 .detail-nav--end {
@@ -2273,34 +2279,25 @@ a:hover {
   border-radius: 7px;
   transition:
     background-color 0.2s var(--ease-out),
-    color 0.2s var(--ease-out),
-    transform 0.22s var(--ease-out);
+    color 0.2s var(--ease-out);
 }
 
-.site-floating-nav__link:hover,
-.site-floating-nav__link:focus-visible {
+.site-floating-nav__item:not(.is-active) .site-floating-nav__link:hover,
+.site-floating-nav__item:not(.is-active) .site-floating-nav__link:focus-visible {
   background: rgba(27, 50, 79, 0.1);
   color: var(--text);
   text-decoration: none;
-  transform: scale(1.08);
 }
 
 .gg-dark-mode .site-floating-nav__link {
   color: rgba(255, 255, 255, 0.92);
 }
 
-.gg-dark-mode .site-floating-nav__link:hover,
-.gg-dark-mode .site-floating-nav__link:focus-visible {
+.gg-dark-mode .site-floating-nav__item:not(.is-active) .site-floating-nav__link:hover,
+.gg-dark-mode .site-floating-nav__item:not(.is-active) .site-floating-nav__link:focus-visible {
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
   text-decoration: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .site-floating-nav__link:hover,
-  .site-floating-nav__link:focus-visible {
-    transform: none;
-  }
 }
 
 /* --- Home footer (social) --- */

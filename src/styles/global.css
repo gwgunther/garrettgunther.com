@@ -10,18 +10,19 @@
   --accent-soft: rgba(27, 50, 79, 0.12);
   --accent-rgb: 27, 50, 79;
   --border: rgba(27, 50, 79, 0.12);
-  --font-brand: 'Erode', Georgia, 'Times New Roman', serif;
+  /* Type roles: brand=Grit Primer; display=Switzer Black; ui/body=Switzer */
+  --font-brand: 'Grit Primer', Georgia, 'Times New Roman', serif;
   --font-display: 'Switzer', 'Helvetica Neue', Arial, sans-serif;
   --font-ui: 'Switzer', 'Helvetica Neue', Arial, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-mono: var(--font-ui);
   --type-body-size: 0.95rem;
   --type-body-tracking: 0.02em;
   --type-fluid-xl: clamp(0.95rem, 0.35vw + 0.82rem, 1.15rem);
   --type-fluid-lg: clamp(0.82rem, 0.2vw + 0.74rem, 0.95rem);
   --type-fluid-base: clamp(1.35rem, 1.8vw + 0.95rem, 1.9rem);
   --type-fluid-sm: clamp(0.72rem, 0.15vw + 0.66rem, 0.82rem);
-  --type-label-size: 0.72rem;
-  --type-label-tracking: 0.14em;
+  --type-label-size: 0.78rem;
+  --type-label-tracking: 0.02em;
   --type-label-weight: 500;
   --space-xs: 0.35rem;
   --space-sm: 0.75rem;
@@ -212,7 +213,7 @@ a:hover {
 .site-title {
   margin: 0;
   font-family: var(--font-brand);
-  font-weight: 500;
+  font-weight: 700;
   font-size: clamp(1.75rem, 4vw, 2.35rem);
   letter-spacing: -0.02em;
   line-height: 1.1;
@@ -262,11 +263,11 @@ a:hover {
 }
 
 .site-nav-main {
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   font-size: 0.68rem;
   font-weight: 500;
-  letter-spacing: 0.17em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  text-transform: none;
   line-height: 1;
 }
 
@@ -437,13 +438,13 @@ a:hover {
 
 
 .site-social a {
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   color: var(--accent);
   text-decoration: none;
   font-size: 0.68rem;
   font-weight: 500;
-  letter-spacing: 0.17em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  text-transform: none;
   line-height: 1;
   opacity: 0.95;
   transition: color 0.2s var(--ease-out), opacity 0.2s var(--ease-out);
@@ -506,11 +507,11 @@ a:hover {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-md);
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   font-size: var(--type-body-size);
   font-weight: 500;
   letter-spacing: var(--type-label-tracking);
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .intro__links a {
@@ -554,11 +555,11 @@ a:hover {
 
 .year-label {
   margin: 0 0 var(--space-md);
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
   letter-spacing: var(--type-label-tracking);
-  text-transform: uppercase;
+  text-transform: none;
   color: var(--accent);
   border-bottom: 1px solid var(--border);
   padding-bottom: var(--space-sm);
@@ -567,15 +568,12 @@ a:hover {
 .intro__lead {
   margin: 0;
   max-width: 38rem;
-  font-size: var(--type-body-size);
+  font-family: var(--font-brand);
+  font-weight: 400;
+  font-size: clamp(1.15rem, 1.4vw + 0.9rem, 1.4rem);
   letter-spacing: var(--type-body-tracking);
   line-height: 1.45;
   color: var(--text);
-}
-
-.intro__lead.fluid-text-xl {
-  /* Keep lead on the body token — don't let fluid-text-xl override by viewport. */
-  font-size: var(--type-body-size);
 }
 
 
@@ -644,13 +642,13 @@ a:hover {
 }
 
 .intro-line__link {
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   color: var(--accent);
   text-decoration: none;
-  font-size: var(--type-label-size);
+  font-size: clamp(0.78rem, 0.55vw + 0.68rem, 0.92rem);
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: var(--type-label-tracking);
+  text-transform: none;
+  letter-spacing: 0.02em;
   line-height: 1.15;
 }
 
@@ -690,11 +688,11 @@ a:hover {
 
 .intro-variant h3 {
   margin: 0 0 0.25rem;
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
   letter-spacing: var(--type-label-tracking);
-  text-transform: uppercase;
+  text-transform: none;
   color: var(--text-muted);
 }
 
@@ -732,10 +730,10 @@ a:hover {
 }
 
 .intro-path-roman {
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   font-size: var(--type-label-size);
   letter-spacing: var(--type-label-tracking);
-  text-transform: uppercase;
+  text-transform: none;
   color: var(--text-muted);
 }
 
@@ -770,10 +768,10 @@ a:hover {
   background: rgba(var(--bg-rgb), 0.75);
   color: var(--accent);
   text-decoration: none;
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   font-size: 0.75rem;
   font-weight: 500;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.02em;
 }
 
 .chip--soft {
@@ -785,10 +783,10 @@ a:hover {
 }
 
 .intro-path-meta {
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   font-size: var(--type-label-size);
   letter-spacing: var(--type-label-tracking);
-  text-transform: uppercase;
+  text-transform: none;
   color: var(--text-muted);
 }
 
@@ -817,10 +815,10 @@ a:hover {
 }
 
 .intro-path-final__roman {
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   font-size: var(--type-label-size);
   letter-spacing: var(--type-label-tracking);
-  text-transform: uppercase;
+  text-transform: none;
   color: var(--text-muted);
 }
 
@@ -1030,12 +1028,12 @@ a:hover {
 }
 
 .all-years__label {
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   font-size: 0.68rem;
   font-weight: 500;
-  letter-spacing: 0.17em;
+  letter-spacing: 0.02em;
   line-height: 1;
-  text-transform: uppercase;
+  text-transform: none;
   color: var(--text-muted);
   text-align: center;
   white-space: nowrap;
@@ -1127,11 +1125,11 @@ a:hover {
 
 /* Remove previous compact-year link styling if an older build still includes it. */
 .all-years__link {
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
   letter-spacing: var(--type-label-tracking);
-  text-transform: uppercase;
+  text-transform: none;
   color: var(--text-muted);
   text-decoration: none;
 }
@@ -1365,12 +1363,12 @@ a:hover {
 .project-card--year-start > .project-year-marker span {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
   letter-spacing: var(--type-label-tracking);
   line-height: 1;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 @media (max-width: 560px) {
@@ -1402,11 +1400,11 @@ a:hover {
   left: var(--space-xs);
   z-index: 2;
   padding: 0.2rem 0.45rem;
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
   letter-spacing: var(--type-label-tracking);
-  text-transform: uppercase;
+  text-transform: none;
   color: var(--text);
   background: rgba(var(--bg-rgb), 0.92);
   border: 1px solid var(--border);
@@ -1644,10 +1642,10 @@ a:hover {
 }
 
 .project-card__thumb-fallback {
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   font-size: var(--type-label-size);
   letter-spacing: var(--type-label-tracking);
-  text-transform: uppercase;
+  text-transform: none;
   color: rgba(255, 255, 255, 0.45);
 }
 
@@ -1890,11 +1888,11 @@ a:hover {
 
 .project-detail .detail-nav__prev,
 .project-detail .detail-nav__next {
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
   letter-spacing: var(--type-label-tracking);
-  text-transform: uppercase;
+  text-transform: none;
   color: var(--text-muted);
   text-decoration: none;
   line-height: 1.4;
@@ -2201,11 +2199,11 @@ a:hover {
 }
 
 .home-hero-media__label {
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
   letter-spacing: var(--type-label-tracking);
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 @media (min-width: 900px) {
@@ -2271,11 +2269,11 @@ a:hover {
 .site-floating-nav__link {
   display: block;
   padding: 0.85rem 1.45rem;
-  font-family: var(--font-mono);
-  font-size: 0.76rem;
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
   font-weight: var(--type-label-weight);
-  letter-spacing: var(--type-label-tracking);
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  text-transform: none;
   color: var(--accent);
   text-decoration: none;
   border-radius: 7px;
@@ -2322,11 +2320,11 @@ a:hover {
 }
 
 .home-site-footer__link {
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
   letter-spacing: var(--type-label-tracking);
-  text-transform: uppercase;
+  text-transform: none;
   color: var(--accent);
 }
 

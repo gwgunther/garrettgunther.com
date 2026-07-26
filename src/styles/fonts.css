@@ -1,10 +1,36 @@
 /**
- * Self-hosted Fontshare faces (Indian Type Foundry / Fontshare FFL).
- * Sources: _REFERENCES/Erode_Complete, _REFERENCES/Switzer_Complete
- * Served from: /public/fonts/{erode,switzer}/*.woff2
+ * Self-hosted faces.
+ * Sources: _REFERENCES/Erode_Complete, _REFERENCES/Switzer_Complete, _REFERENCES/GRIT PRIMER
+ * Served from: /public/fonts/{erode,switzer,grit-primer}/*.woff2
  */
 
-/* --- Erode (brand + titles) --------------------------------------------- */
+/* --- Grit Primer (site name + intro lead) ------------------------------- */
+
+@font-face {
+  font-family: 'Grit Primer';
+  src: url('/fonts/grit-primer/GritPrimer-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Grit Primer';
+  src: url('/fonts/grit-primer/GritPrimer-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Grit Primer';
+  src: url('/fonts/grit-primer/GritPrimer-BoldItalic.woff2') format('woff2');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* --- Erode (kept available) --------------------------------------------- */
 
 @font-face {
   font-family: 'Erode';
@@ -30,7 +56,7 @@
   font-display: swap;
 }
 
-/* --- Switzer (body / UI) ------------------------------------------------ */
+/* --- Switzer (body / UI / titles) --------------------------------------- */
 
 @font-face {
   font-family: 'Switzer';

@@ -678,6 +678,12 @@ a:hover {
   color: var(--text);
 }
 
+/* Force the diagonal arrow to render as a thin glyph, not an emoji (mobile). */
+.intro-line__arrow {
+  font-variant-emoji: text;
+  font-family: var(--font-ui);
+}
+
 .intro-line__sep {
   color: var(--text-muted);
   margin: 0 0.25rem;
@@ -1431,6 +1437,7 @@ a:hover {
   color: var(--text);
   background: rgba(var(--bg-rgb), 0.92);
   border: 1px solid var(--border);
+  border-radius: 3px;
   line-height: 1.2;
   pointer-events: none;
 }
@@ -1450,6 +1457,7 @@ a:hover {
   padding: var(--space-sm);
   background: #fff;
   border: 1px solid transparent;
+  border-radius: 4px;
   color: inherit;
   animation: rise 0.65s var(--ease-out) both;
   transition: box-shadow 0.2s var(--ease-out), background-color 0.2s var(--ease-out);

@@ -33,9 +33,9 @@ const siteJsonLd = {
   jsonLd={siteJsonLd}
   bodyClass="page-home"
 >
-  <SiteHeader />
   <main id="main" class="home-layout">
     <section class="home-scroll" data-smooth-scroll-host>
+      <SiteHeader />
       <section class="intro intro--home wrap">
         <div class="intro-context anim-intro anim-intro--1">
           <p class="intro__lead">
@@ -63,7 +63,17 @@ const siteJsonLd = {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Instagram <span class="intro-line__arrow" aria-hidden="true">&#x2197;&#xFE0E;</span>
+                Instagram <span class="intro-line__arrow" aria-hidden="true">
+                  <svg viewBox="0 0 12 12" fill="none">
+                    <path
+                      d="M3.2 8.8 8.8 3.2M8.8 3.2H4.6M8.8 3.2v4.2"
+                      stroke="currentColor"
+                      stroke-width="1.3"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </span>
               </a>
               <a
                 class="intro-line__link link-animated-underline"
@@ -71,7 +81,17 @@ const siteJsonLd = {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                LinkedIn <span class="intro-line__arrow" aria-hidden="true">&#x2197;&#xFE0E;</span>
+                LinkedIn <span class="intro-line__arrow" aria-hidden="true">
+                  <svg viewBox="0 0 12 12" fill="none">
+                    <path
+                      d="M3.2 8.8 8.8 3.2M8.8 3.2H4.6M8.8 3.2v4.2"
+                      stroke="currentColor"
+                      stroke-width="1.3"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </span>
               </a>
             </div>
           </div>

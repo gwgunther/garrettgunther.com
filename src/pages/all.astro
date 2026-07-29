@@ -66,8 +66,9 @@ const FORCE_EAGER_VIDEO_SLUGS = new Set([
   meshStrongCursor={true}
   bodyClass="page-all"
 >
-  <SiteHeader />
   <main id="main" class="all-layout">
+    <section class="all-work-scroll" data-smooth-scroll-host>
+    <SiteHeader />
     <nav class="all-years wrap" aria-label="Project timeline">
       <div class="all-years__rail">
         <div class="all-years__line" aria-hidden="true"></div>
@@ -108,7 +109,6 @@ const FORCE_EAGER_VIDEO_SLUGS = new Set([
       </div>
     </nav>
 
-    <section class="all-work-scroll" data-smooth-scroll-host>
       <div id="work" class="wrap all-work-grid">
         <div class="project-grid">
           {

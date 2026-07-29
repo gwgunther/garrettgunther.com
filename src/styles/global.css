@@ -21,7 +21,6 @@
   --space-lg: 2.5rem;
   --space-xl: 4.5rem;
   --max-w: 1200px;
-  --header-height: 3.25rem;
   --grid-gap: var(--space-md);
   --top-section-height: 7.1rem;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -59,7 +58,6 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  padding-top: calc(var(--space-md) + var(--header-height));
   font-family: var(--font-ui);
   font-weight: 400;
   font-size: 1rem;
@@ -154,16 +152,11 @@ a:hover {
 }
 
 /* --- Header --- */
+/* Scrolls with the page: it carries no navigation, so pinning it earned nothing.
+   On the inner-scroll layouts it lives inside the scroll container. */
 .site-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 50;
   background: var(--bg);
   padding-block: var(--space-md);
-  border-bottom: none;
-  box-shadow: none;
 }
 
 .gg-dark-mode .site-header {
@@ -193,7 +186,7 @@ a:hover {
   margin: 0;
   font-family: var(--font-brand);
   font-weight: 700;
-  font-size: clamp(1.75rem, 4vw, 2.35rem);
+  font-size: clamp(2.4rem, 4.6vw, 3.4rem);
   letter-spacing: -0.02em;
   line-height: 1.1;
 }
@@ -246,13 +239,6 @@ a:hover {
   line-height: 1;
   overflow: hidden;
   transition: border-color 0.2s var(--ease-out), background-color 0.2s var(--ease-out), color 0.2s var(--ease-out);
-}
-
-.site-header .dark-mode-toggle {
-  position: fixed;
-  top: var(--space-md);
-  right: var(--space-md);
-  z-index: 80;
 }
 
 @media (max-width: 860px) {
@@ -416,8 +402,10 @@ a:hover {
 .intro__lead {
   margin: 0;
   font-family: var(--font-brand);
-  font-weight: 400;
-  font-size: clamp(2.3rem, 2.8vw + 1.8rem, 2.8rem);
+  /* 700 is Grit Primer's heaviest weight, matching the name but never exceeding
+     it — the size gap carries the hierarchy. */
+  font-weight: 700;
+  font-size: clamp(1.15rem, 1.4vw + 0.9rem, 1.4rem);
   letter-spacing: var(--type-body-tracking);
   line-height: 1.25;
   color: var(--text);
@@ -504,10 +492,20 @@ a:hover {
   color: var(--text);
 }
 
-/* Force the diagonal arrow to render as a thin glyph, not an emoji (mobile). */
+/* Drawn rather than typed: no installed font ships U+2197, so the character
+   fell through to a platform fallback and rendered differently per device. */
 .intro-line__arrow {
-  font-variant-emoji: text;
-  font-family: var(--font-ui);
+  display: inline-block;
+  width: 0.78em;
+  height: 0.78em;
+  margin-left: 0.12em;
+  vertical-align: -0.04em;
+}
+
+.intro-line__arrow svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 
@@ -521,15 +519,13 @@ a:hover {
 
 .all-layout {
   position: fixed;
-  inset: calc(var(--space-md) + var(--header-height)) 0 0;
-  display: grid;
-  grid-template-rows: var(--top-section-height) minmax(0, 1fr);
+  inset: 0;
   min-height: 0;
 }
 
 .home-layout {
   position: fixed;
-  inset: calc(var(--space-md) + var(--header-height)) 0 0;
+  inset: 0;
   min-height: 0;
 }
 
@@ -545,7 +541,7 @@ a:hover {
 
 .detail-layout {
   position: fixed;
-  inset: calc(var(--space-md) + var(--header-height)) 0 0;
+  inset: 0;
   min-height: 0;
 }
 
@@ -556,9 +552,11 @@ a:hover {
   padding-bottom: var(--home-nav-offset);
 }
 
+/* The timeline is a scroll scrubber, so it pins to the top of the scroll
+   container once the header has scrolled past it. */
 .all-years {
-  position: relative;
-  top: auto;
+  position: sticky;
+  top: 0;
   z-index: 45;
   margin-bottom: 0;
   min-height: var(--top-section-height);
@@ -568,11 +566,16 @@ a:hover {
   background: var(--bg);
 }
 
+/* Sticky needs an opaque backdrop so cards don't show through as they pass
+   under it; matches the floating nav's translucent treatment. */
 .gg-dark-mode .all-years {
-  background: transparent;
+  background: rgba(7, 16, 38, 0.72);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
 }
 
 .all-work-scroll {
+  height: 100%;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;

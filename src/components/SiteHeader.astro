@@ -4,9 +4,11 @@ type Props = {
   currentView?: 'all' | 'fluid' | 'cities' | 'mesh';
   /** Home uses bottom floating nav — hide top-level project links */
   isHome?: boolean;
+  /** Pages with their own project nav (e.g. detail) can hide the header link */
+  showProjectsLink?: boolean;
 };
 
-const { currentView, isHome = false } = Astro.props;
+const { currentView, isHome = false, showProjectsLink = true } = Astro.props;
 const isFluidBackdrop = currentView === 'fluid';
 ---
 
@@ -25,7 +27,7 @@ const isFluidBackdrop = currentView === 'fluid';
       <nav aria-label="Site">
         <ul class="site-nav-main">
           {
-            !isHome && currentView !== 'all' ? (
+            !isHome && currentView !== 'all' && showProjectsLink ? (
               <li>
                 <a href="/all/">All Projects</a>
               </li>

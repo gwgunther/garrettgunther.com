@@ -76,24 +76,28 @@ const siteJsonLd = {
             </div>
           </div>
         </div>
-
-        <h2 class="featured-label">Featured</h2>
       </section>
 
-      <div id="work" class="wrap home-work">
-        <div class="project-list">
-          {
-            featured.map((p, i) => (
-              <FeaturedProjectCard
-                project={p}
-                isPriority={i < 2}
-                animationIndex={i}
-                variant="home"
-              />
-            ))
-          }
+      <section class="featured-section">
+        <div class="wrap">
+          <h2 class="featured-label">Featured</h2>
+
+          <div id="work" class="home-work">
+            <div class="project-list">
+              {
+                featured.map((p, i) => (
+                  <FeaturedProjectCard
+                    project={p}
+                    isPriority={i < 2}
+                    animationIndex={i}
+                    variant="home"
+                  />
+                ))
+              }
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
     </section>
   </main>
   <SiteFloatingNav

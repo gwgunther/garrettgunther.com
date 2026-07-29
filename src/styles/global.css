@@ -7,6 +7,8 @@
   --text: #1b324f;
   --text-muted: rgba(27, 50, 79, 0.62);
   --accent: #1b324f;
+  /* Deep brand navy — darker than the text/accent navy, for the featured band. */
+  --navy-deep: #0c1c33;
   --accent-soft: rgba(27, 50, 79, 0.12);
   --accent-rgb: 27, 50, 79;
   --border: rgba(27, 50, 79, 0.12);
@@ -469,7 +471,7 @@ a:hover {
 }
 
 .intro--home {
-  padding-top: var(--space-lg);
+  padding-top: var(--space-sm);
   padding-bottom: var(--space-sm);
 }
 
@@ -500,6 +502,25 @@ a:hover {
 
 .home-work {
   padding-top: 0;
+}
+
+/* Featured band: full-bleed navy panel that separates the work from the header. */
+.featured-section {
+  margin-top: var(--space-lg);
+  padding-block: var(--space-lg) var(--space-xl);
+  background: var(--navy-deep);
+}
+
+.featured-section .featured-label {
+  margin: 0 0 var(--space-lg);
+  color: #fff;
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+/* In dark mode the page already sits on the mesh; let it show through. */
+.gg-dark-mode .featured-section {
+  background: transparent;
 }
 
 .intro__links {
@@ -572,7 +593,7 @@ a:hover {
   font-weight: 400;
   font-size: clamp(1.15rem, 1.4vw + 0.9rem, 1.4rem);
   letter-spacing: var(--type-body-tracking);
-  line-height: 1.45;
+  line-height: 1.25;
   color: var(--text);
 }
 
@@ -639,6 +660,7 @@ a:hover {
 .intro-work-link__name {
   display: inline-block;
   text-align: left;
+  white-space: nowrap;
 }
 
 .intro-line__link {
@@ -912,6 +934,7 @@ a:hover {
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
+  padding-bottom: var(--home-nav-offset);
 }
 
 .all-years {
@@ -1177,7 +1200,7 @@ a:hover {
 .project-card__media {
   position: relative;
   background: #fff;
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   overflow: hidden;
   aspect-ratio: 16 / 10;
 }
@@ -1426,7 +1449,7 @@ a:hover {
   gap: var(--space-sm);
   padding: var(--space-sm);
   background: #fff;
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   color: inherit;
   animation: rise 0.65s var(--ease-out) both;
   transition: box-shadow 0.2s var(--ease-out), background-color 0.2s var(--ease-out);
@@ -1799,7 +1822,7 @@ a:hover {
 }
 
 .project-hero__inner {
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   background: var(--bg-elevated);
   overflow: hidden;
 }
@@ -1869,9 +1892,30 @@ a:hover {
   color: rgba(255, 255, 255, 0.96);
 }
 
-.detail-nav--title {
-  margin-top: 0;
+.detail-back {
+  display: inline-block;
   margin-bottom: var(--space-md);
+  font-family: var(--font-ui);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  letter-spacing: var(--type-label-tracking);
+  text-transform: none;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.detail-back:hover {
+  color: var(--accent);
+}
+
+.detail-back:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.gg-dark-mode .project-detail .detail-back {
+  color: rgba(255, 255, 255, 0.96);
 }
 
 .detail-nav--end {
@@ -1920,19 +1964,6 @@ a:hover {
   border-radius: 2px;
 }
 
-@media (max-width: 560px) {
-  .detail-nav__prev-next {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-sm);
-  }
-
-  .detail-nav__next {
-    align-self: flex-end;
-    text-align: right;
-  }
-}
 
 .embed {
   position: relative;
@@ -2186,7 +2217,7 @@ a:hover {
   width: 100%;
   aspect-ratio: 1;
   object-fit: cover;
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   background: var(--bg-elevated);
 }
 

@@ -43,3 +43,37 @@ media-source/
 - Node version: `22.12.0` or newer
 
 `public/_headers` and `public/_redirects` are included in builds for Cloudflare Pages behavior.
+
+## Hosted Images (cloud hosting, not part of the site)
+
+Anything in `public/` is published verbatim at the matching URL, which makes it a
+convenient place to park images that need a stable public link (email signatures,
+one-off shares) even though no page on the site renders them.
+
+Convention for new uploads:
+
+```text
+public/hosted/<topic-or-person>/<file>   →  https://garrettgunther.com/hosted/<topic-or-person>/<file>
+```
+
+- `public/carlee/` predates this convention. **Leave its paths alone** — the URLs
+  may already be linked from outside the repo, and moving a file changes its URL.
+- Keep files web-sized; everything here ships on every deploy.
+- These folders are intentionally unreferenced by any page. Don't "clean them up"
+  just because nothing imports them.
+
+## References Archive (`references/`)
+
+`references/` is committed for reference but **never built or served** — Astro only
+creates routes from `src/pages/`, and only `public/` is published.
+
+- `references/experiments/` — WebGL/gradient studies, including the former
+  `/fluid/`, `/fluid-background/`, and `/mesh/` routes plus `FluidMarbleFull.astro`.
+  To bring one back, move the page into `src/pages/` (and its component into
+  `src/components/`).
+- `references/fonts/erode/` — the unused Erode family. To use it, copy the folder
+  into `public/fonts/` and re-add the `@font-face` blocks to `src/styles/fonts.css`.
+
+Two files in `public/` are live dependencies despite looking standalone:
+`flow-gradient-full.html` (the dark-mode background, iframed by `BaseLayout`) and
+`cities.html` (iframed by `/cities/`). Don't remove them.

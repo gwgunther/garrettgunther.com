@@ -30,31 +30,9 @@
   font-display: swap;
 }
 
-/* --- Erode (kept available) --------------------------------------------- */
-
-@font-face {
-  font-family: 'Erode';
-  src: url('/fonts/erode/Erode-Medium.woff2') format('woff2');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Erode';
-  src: url('/fonts/erode/Erode-Bold.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Erode';
-  src: url('/fonts/erode/Erode-BoldItalic.woff2') format('woff2');
-  font-weight: 700;
-  font-style: italic;
-  font-display: swap;
-}
+/* Erode is unused; its files are archived in references/fonts/erode/.
+   To use it again, copy that folder back into public/fonts/ and re-add
+   the @font-face blocks here. */
 
 /* --- Switzer (body / UI / titles) --------------------------------------- */
 

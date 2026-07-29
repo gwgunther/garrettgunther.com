@@ -1,7 +1,7 @@
 ---
 type Props = {
   /** Highlights the matching nav item; omit on home */
-  currentView?: 'all' | 'fluid' | 'cities' | 'mesh';
+  currentView?: 'all' | 'cities';
   /** Home uses bottom floating nav — hide top-level project links */
   isHome?: boolean;
   /** Pages with their own project nav (e.g. detail) can hide the header link */
@@ -9,10 +9,9 @@ type Props = {
 };
 
 const { currentView, isHome = false, showProjectsLink = true } = Astro.props;
-const isFluidBackdrop = currentView === 'fluid';
 ---
 
-<header class:list={['site-header', isFluidBackdrop && 'site-header--fluid']}>
+<header class="site-header">
   <div class="wrap site-header__inner">
     <p class="site-title"><a
         href="/cities/"

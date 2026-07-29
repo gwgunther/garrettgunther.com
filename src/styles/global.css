@@ -186,7 +186,7 @@ a:hover {
   margin: 0;
   font-family: var(--font-brand);
   font-weight: 700;
-  font-size: clamp(2.4rem, 4.6vw, 3.4rem);
+  font-size: clamp(3.6rem, 6.9vw, 5.1rem);
   letter-spacing: -0.02em;
   line-height: 1.1;
 }
@@ -227,7 +227,7 @@ a:hover {
   position: relative;
   height: 1.9rem;
   width: 1.9rem;
-  border: 1px solid rgba(27, 50, 79, 0.32);
+  border: 0;
   border-radius: 0;
   background: transparent;
   color: var(--accent);
@@ -238,7 +238,10 @@ a:hover {
   justify-content: center;
   line-height: 1;
   overflow: hidden;
-  transition: border-color 0.2s var(--ease-out), background-color 0.2s var(--ease-out), color 0.2s var(--ease-out);
+  transition:
+    transform 0.2s var(--ease-out),
+    background-color 0.2s var(--ease-out),
+    color 0.2s var(--ease-out);
 }
 
 @media (max-width: 860px) {
@@ -287,32 +290,30 @@ a:hover {
 }
 
 .dark-mode-toggle:focus-visible {
-  outline: none;
-  box-shadow: none;
+  outline: 1px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .dark-mode-toggle:hover {
-  border-color: rgba(255, 255, 255, 0.7);
+  transform: scale(1.08);
 }
 
-.dark-mode-toggle.is-active {
-  border-color: rgba(255, 255, 255, 0.92);
+.dark-mode-toggle:active {
+  transform: scale(0.96);
 }
 
 .gg-dark-mode .dark-mode-toggle {
   color: #fff;
   background: transparent;
-  border-color: rgba(255, 255, 255, 0.62);
 }
 
 .gg-dark-mode .dark-mode-toggle.is-active {
   background: #fff;
   color: #1b324f;
-  border-color: #fff;
 }
 
-.gg-dark-mode .dark-mode-toggle:hover {
-  transform: none;
+.gg-dark-mode .dark-mode-toggle:focus-visible {
+  outline-color: #fff;
 }
 
 .dark-mode-toggle.is-active .dark-mode-toggle__icon--sun {
@@ -405,7 +406,7 @@ a:hover {
   /* 700 is Grit Primer's heaviest weight, matching the name but never exceeding
      it — the size gap carries the hierarchy. */
   font-weight: 700;
-  font-size: clamp(1.15rem, 1.4vw + 0.9rem, 1.4rem);
+  font-size: clamp(1.275rem, 1.4vw + 1.025rem, 1.525rem);
   letter-spacing: var(--type-body-tracking);
   line-height: 1.25;
   color: var(--text);
@@ -930,7 +931,7 @@ a:hover {
   padding: var(--space-sm);
   background: #fff;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 6px;
   color: inherit;
   animation: rise 0.65s var(--ease-out) both;
   transition: box-shadow 0.2s var(--ease-out), background-color 0.2s var(--ease-out);

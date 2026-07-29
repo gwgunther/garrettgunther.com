@@ -217,4 +217,30 @@ const jsonLd = {
       { label: 'All Projects', href: '/all/' },
     ]}
   />
+  {
+    showPrevNext ? (
+      <script is:inline>
+        document.addEventListener('keydown', (event) => {
+          if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+          if (event.metaKey || event.ctrlKey || event.altKey) return;
+
+          const lightbox = document.getElementById('lightbox-modal');
+          if (lightbox?.classList.contains('is-open')) return;
+
+          const tag = document.activeElement?.tagName;
+          if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'VIDEO') return;
+          if (document.activeElement?.isContentEditable) return;
+
+          const link = document.querySelector(
+            event.key === 'ArrowLeft' ? '.detail-nav__prev' : '.detail-nav__next'
+          );
+          const href = link?.getAttribute('href');
+          if (!href) return;
+
+          event.preventDefault();
+          window.location.assign(href);
+        });
+      </script>
+    ) : null
+  }
 </BaseLayout>

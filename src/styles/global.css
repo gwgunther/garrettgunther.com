@@ -415,7 +415,6 @@ a:hover {
 
 .intro__lead {
   margin: 0;
-  max-width: 38rem;
   font-family: var(--font-brand);
   font-weight: 400;
   font-size: clamp(2.3rem, 2.8vw + 1.8rem, 2.8rem);
